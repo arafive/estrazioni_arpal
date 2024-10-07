@@ -1,0 +1,9 @@
+wheel
+numpy
+pandas
+matplotlib
+scikit-learn
+cartopy
+xarray
+spyder-kernels==2.5.*
+cfgrib
