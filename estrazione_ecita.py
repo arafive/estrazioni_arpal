@@ -6,6 +6,36 @@ import configparser
 import numpy as np
 import pandas as pd
 
+def f_dizionario_ds_variabili(lista_ds):
+    """Ritorna il dizionario che lega dataset alle variabili.
+    
+    Parameters
+    ----------
+    lista_ds : list
+        Lista che contiene i vari dataset.
+
+    Returns
+    -------
+    dict_ds_variabili : dict
+        Dizionario dove le chiavi sono le variabili e
+        i valori delle liste che contengono gli indici
+        dei dataset in 'lista_ds' che contengono
+        quella variabile.
+
+    """
+    dict_ds_variabili = {}
+    
+    for i, ds in enumerate(lista_ds):
+        
+        for v in [x for x in ds.data_vars]:
+            if v not in dict_ds_variabili.keys():
+                dict_ds_variabili[v] = [i]
+            else:
+                dict_ds_variabili[v].append(i)
+                
+    return dict_ds_variabili
+
+# %%
 
 config = configparser.ConfigParser()
 config.read('./config.ini')
@@ -30,5 +60,7 @@ for d in lista_date_start_forecast:
 
     lista_ds = cfgrib.open_datasets(f'{percorso_file_grib}/{nome_file_grib}',
                                     indexpath=f'/tmp/{nome_file_grib}.idx')
+
+    dict_ds_variabili = f_dizionario_ds_variabili(lista_ds)
 
 print('\n\nDone')
