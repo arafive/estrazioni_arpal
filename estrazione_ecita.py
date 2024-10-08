@@ -21,9 +21,13 @@ def f_dizionario_ds_variabili(lista_ds):
         i valori delle liste che contengono gli indici
         dei dataset in 'lista_ds' che contengono
         quella variabile.
+    df_attributi : pandas.core.frame.DataFrame
+        Il dataframe che contiene gli attributi, oltre
+        all'indice del dataset che contiene quella variabile.
 
     """
     dict_ds_variabili = {}
+    df_attributi = pd.DataFrame()
     
     for i, ds in enumerate(lista_ds):
         
@@ -32,8 +36,10 @@ def f_dizionario_ds_variabili(lista_ds):
                 dict_ds_variabili[v] = [i]
             else:
                 dict_ds_variabili[v].append(i)
+
+            df_attributi = pd.concat([df_attributi, pd.DataFrame(ds[v].attrs, index=[v])])
                 
-    return dict_ds_variabili
+    return dict_ds_variabili, df_attributi
 
 # %%
 
@@ -61,6 +67,11 @@ for d in lista_date_start_forecast:
     lista_ds = cfgrib.open_datasets(f'{percorso_file_grib}/{nome_file_grib}',
                                     indexpath=f'/tmp/{nome_file_grib}.idx')
 
-    dict_ds_variabili = f_dizionario_ds_variabili(lista_ds)
+    dict_ds_variabili, df_attributi = f_dizionario_ds_variabili(lista_ds)
+    
+    # TODO alla prossima commit -> aggiungi il ciclo sulle variabili
+    # for v in 
+    
+    # sss
 
 print('\n\nDone')
