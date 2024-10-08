@@ -7,6 +7,26 @@ import configparser
 import numpy as np
 import pandas as pd
 
+def f_crea_cartella(percorso_cartella):
+    """Crea una cartella, printa per conferma e ritorna il percorso.
+    
+    Parameters
+    ----------
+    percorso_cartella : str
+        Lista che contiene i vari dataset.
+
+    Returns
+    -------
+    percorso_cartella : str
+        Lista che contiene i vari dataset.
+
+    """
+    os.makedirs(percorso_cartella, exist_ok=True)
+    print(f'Creata cartella {percorso_cartella}\n')
+
+    return percorso_cartella
+
+
 def f_dizionario_ds_variabili(lista_ds):
     """Ritorna il dizionario che lega dataset alle variabili.
     
@@ -28,7 +48,7 @@ def f_dizionario_ds_variabili(lista_ds):
 
     """
     dict_ds_variabili = {}
-    df_attributi = pd.DataFrame()
+    df_attrs = pd.DataFrame()
     
     for i, ds in enumerate(lista_ds):
         
@@ -38,19 +58,28 @@ def f_dizionario_ds_variabili(lista_ds):
             else:
                 dict_ds_variabili[v].append(i)
 
-            df_attributi = pd.concat([df_attributi, pd.DataFrame({'id_ds': i} | ds[v].attrs, index=[v])])
+            df_attrs = pd.concat([df_attrs, pd.DataFrame({'id_ds': i} | ds[v].attrs, index=[v])])
             
     ### Elimino le colonne i vuoi valori sono comuni a tutte le righe
-    for i in df_attributi:
-        if len(set(df_attributi[i].tolist())) == 1:
-            df_attributi = df_attributi.drop(columns=[i])
-                
-    return dict_ds_variabili, df_attributi
+    for i in df_attrs:
+        if len(set(df_attrs[i].tolist())) == 1:
+            df_attrs = df_attrs.drop(columns=[i])
+    
+    df_attrs = df_attrs.drop(columns=['long_name']) # doppione di 'GRIB_name'
+    df_attrs = df_attrs.drop(columns=['standard_name']) # doppione di 'GRIB_cfName'
+    df_attrs = df_attrs.drop(columns=['GRIB_cfName']) # non ha importanza, sono quasi tutti 'unknown'
+    df_attrs = df_attrs.drop(columns=['units']) # doppione di 'GRIB_units'
+    df_attrs = df_attrs.drop(columns=['GRIB_shortName', 'GRIB_cfVarName']) # doppioni dell'index
+    # df_attrs = df_attrs.drop(columns=['long_name', 'units', 'standard_name', 'GRIB_cfVarName', 'GRIB_shortName'])
+
+    return dict_ds_variabili, df_attrs
 
 # %%
 
 config = configparser.ConfigParser()
 config.read('./config.ini')
+
+
 
 df_file_coordinate = pd.read_csv(config.get('COMMON', 'percorso_file_coordinate'), index_col=0)
 assert 'Latitude' in df_file_coordinate.columns
@@ -73,16 +102,17 @@ for d in lista_date_start_forecast:
     lista_ds = cfgrib.open_datasets(f'{percorso_file_grib}/{nome_file_grib}',
                                     indexpath=f'/tmp/{nome_file_grib}.idx')
 
-    dict_ds_variabili, df_attributi = f_dizionario_ds_variabili(lista_ds)
+    dict_ds_variabili, df_attrs = f_dizionario_ds_variabili(lista_ds)
     
     # TODO alla prossima commit -> aggiungi il ciclo sulle variabili
+    # !!! Ci sono variabili con lo stesso nome (es, u) ma riferite a livelli diversi (es, potentialVorticity o isobaricInhPa)
+    # -> Per risolvere questa omonimia, ho verificato che ogni variabile nell'index ha la tripletta (Index, GRIB_dataType, GRIB_typeOfLevel),
+    # oltre a 'id_ds' dove si trova la variabile. In questo modo posso estrarre le variabili senza che si sovrappongano.
     
     # for v in ast.literal_eval(config.get('ECITA', 'variabili_da_estratte')):
     #     print(v)
-        
-        
-        
     
-    # sss
+    
+    sss
 
 print('\n\nDone')
