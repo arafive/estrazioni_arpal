@@ -1,5 +1,6 @@
 
 import os
+import ast
 import cfgrib
 import configparser
 
@@ -38,6 +39,11 @@ def f_dizionario_ds_variabili(lista_ds):
                 dict_ds_variabili[v].append(i)
 
             df_attributi = pd.concat([df_attributi, pd.DataFrame({'id_ds': i} | ds[v].attrs, index=[v])])
+            
+    ### Elimino le colonne i vuoi valori sono comuni a tutte le righe
+    for i in df_attributi:
+        if len(set(df_attributi[i].tolist())) == 1:
+            df_attributi = df_attributi.drop(columns=[i])
                 
     return dict_ds_variabili, df_attributi
 
@@ -70,7 +76,12 @@ for d in lista_date_start_forecast:
     dict_ds_variabili, df_attributi = f_dizionario_ds_variabili(lista_ds)
     
     # TODO alla prossima commit -> aggiungi il ciclo sulle variabili
-    # for v in 
+    
+    # for v in ast.literal_eval(config.get('ECITA', 'variabili_da_estratte')):
+    #     print(v)
+        
+        
+        
     
     # sss
 
