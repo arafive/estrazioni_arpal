@@ -37,7 +37,7 @@ def f_dizionario_ds_variabili(lista_ds):
             else:
                 dict_ds_variabili[v].append(i)
 
-            df_attributi = pd.concat([df_attributi, pd.DataFrame(ds[v].attrs, index=[v])])
+            df_attributi = pd.concat([df_attributi, pd.DataFrame({'id_ds': i} | ds[v].attrs, index=[v])])
                 
     return dict_ds_variabili, df_attributi
 
