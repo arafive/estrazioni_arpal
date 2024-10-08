@@ -70,7 +70,9 @@ def f_dizionario_ds_variabili(lista_ds):
     df_attrs = df_attrs.drop(columns=['GRIB_cfName']) # non ha importanza, sono quasi tutti 'unknown'
     df_attrs = df_attrs.drop(columns=['units']) # doppione di 'GRIB_units'
     df_attrs = df_attrs.drop(columns=['GRIB_shortName', 'GRIB_cfVarName']) # doppioni dell'index
-    # df_attrs = df_attrs.drop(columns=['long_name', 'units', 'standard_name', 'GRIB_cfVarName', 'GRIB_shortName'])
+    
+    if 'GRIB_dataType' not in df_attrs:
+        df_attrs['GRIB_dataType'] = 'fc' # Nei grib più recenti 'an' e 'fc' sono uniti
 
     return dict_ds_variabili, df_attrs
 
@@ -79,7 +81,7 @@ def f_dizionario_ds_variabili(lista_ds):
 config = configparser.ConfigParser()
 config.read('./config.ini')
 
-
+cartella_madre_estrazione = f_crea_cartella(config.get('COMMON', 'cartella_madre_estrazione'))
 
 df_file_coordinate = pd.read_csv(config.get('COMMON', 'percorso_file_coordinate'), index_col=0)
 assert 'Latitude' in df_file_coordinate.columns
@@ -104,15 +106,18 @@ for d in lista_date_start_forecast:
 
     dict_ds_variabili, df_attrs = f_dizionario_ds_variabili(lista_ds)
     
-    # TODO alla prossima commit -> aggiungi il ciclo sulle variabili
-    # !!! Ci sono variabili con lo stesso nome (es, u) ma riferite a livelli diversi (es, potentialVorticity o isobaricInhPa)
-    # -> Per risolvere questa omonimia, ho verificato che ogni variabile nell'index ha la tripletta (Index, GRIB_dataType, GRIB_typeOfLevel),
-    # oltre a 'id_ds' dove si trova la variabile. In questo modo posso estrarre le variabili senza che si sovrappongano.
+    for v in ast.literal_eval(config.get('ECITA', 'variabili_da_estratte')):
+        df_sub_attrs = df_attrs.loc[v]
+        # TODO alla prossima commit -> cicla correttamente sulla tripletta per creare le cartelle
+        
+        # for i in df_sub_attrs.index:
+            # print(i)
+
+        # print(v, df_attrs.loc[v, 'GRIB_dataType'], df_attrs.loc[v, 'GRIB_typeOfLevel'])
+        # print()
+
+        # sss
+        
     
-    # for v in ast.literal_eval(config.get('ECITA', 'variabili_da_estratte')):
-    #     print(v)
-    
-    
-    sss
 
 print('\n\nDone')
