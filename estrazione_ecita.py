@@ -119,27 +119,70 @@ for d in lista_date_start_forecast:
             grib_dataType = df_sub_attrs.iloc[i]['GRIB_dataType']
             grib_typeOfLevel = df_sub_attrs.iloc[i]['GRIB_typeOfLevel']
 
-            cartella_estrazione = f_crea_cartella(f'{cartella_madre_estrazione}/{nome_var}/{grib_dataType}/{grib_typeOfLevel}')
+            cartella_estrazione = f_crea_cartella(f"{cartella_madre_estrazione}/{config.get('COMMON', 'ora_start_forecast')}/{nome_var}/{grib_dataType}/{grib_typeOfLevel}")
 
             ds = lista_ds[df_sub_attrs.iloc[i]['id_ds']]
+            inizio_run = pd.to_datetime(ds['time'].values)
             tempi = pd.to_datetime(ds['valid_time'].values) # equivalente (ma più robusto) di "pd.to_datetime([ds['time'].values + x for x in ds['step'].values])"
             lon_2D, lat_2D = np.meshgrid(ds['longitude'], ds['latitude'])
+            
+            if ds[grib_typeOfLevel].values.shape == ():
+                livelli = np.array([ds[grib_typeOfLevel].values])
+            else:
+                livelli = ds[grib_typeOfLevel].values
 
-            for s in df_file_coordinate.index:
+            # for s in df_file_coordinate.index:
+            for s in df_file_coordinate.index[0:1]:
                 lat_s = df_file_coordinate.loc[s, 'Latitude']
                 lon_s = df_file_coordinate.loc[s, 'Longitude']
                 
                 distanze_2D = (np.abs(lon_2D - lon_s) + np.abs(lat_2D - lat_s))
                 distanze_1D = np.sort(distanze_2D.flatten())
                 
+                df_estrazione = pd.DataFrame()
+
+                # TODO prossima commit -> estrazione
+
                 for p, lettera, dist in zip(range(int(config.get('COMMON', 'punti_piu_vicini_da_estrarre'))), list(string.ascii_uppercase), distanze_1D):
                     lat_min, lon_min = np.where(distanze_2D == dist)
-                    print(p, lettera, dist, lat_s, lat_2D[lat_min, lon_min][0], lon_s, lon_2D[lat_min, lon_min][0])
-                    
-                    # TODO prossima commit -> estrazione
-                sss
-                
-                
-            
+                    # print(p, lettera, dist, lat_s, lat_2D[lat_min, lon_min][0], lon_s, lon_2D[lat_min, lon_min][0])
 
+                    if grib_dataType == 'an' and grib_typeOfLevel in ['surface', 'potentialVorticity'] and len(ds[nome_var].values.shape) == 2:
+                        ### (latitudini, longitudini)
+                        estrazione = ds[nome_var].values[lat_min, lon_min]
+                        df_estrazione = pd.concat([df_estrazione, pd.DataFrame(estrazione, index=[tempi], columns=[lettera])], axis=1)
+
+                    elif grib_dataType == 'an' and grib_typeOfLevel == 'isobaricInhPa' and len(ds[nome_var].values.shape) == 3:
+                        ### (livelli, latitudini, longitudini)
+                        estrazione = ds[nome_var].values[:, lat_min, lon_min].squeeze()
+                        df_estrazione = pd.concat([df_estrazione, pd.DataFrame(estrazione, index=[livelli], columns=[lettera])], axis=1)
+
+                    elif grib_dataType == 'fc' and grib_typeOfLevel in ['surface', 'potentialVorticity'] and len(ds[nome_var].values.shape) == 3:
+                        ### (tempi, latitudini, longitudini)
+                        estrazione = ds[nome_var].values[:, lat_min, lon_min].squeeze()
+                        df_estrazione = pd.concat([df_estrazione, pd.DataFrame(estrazione, index=[tempi], columns=[lettera])], axis=1)
+
+                    elif grib_dataType == 'fc' and grib_typeOfLevel == 'isobaricInhPa' and len(ds[nome_var].values.shape) == 4:
+                        ### (tempi, livelli, latitudini, longitudini)
+                        print(nome_var, grib_dataType, grib_typeOfLevel, ds[nome_var].values.shape, len(ds[nome_var].values.shape))
+
+                        df_tmp = pd.DataFrame()
+                        for ind_l, l in enumerate(livelli):
+                            estrazione_tempi = ds[nome_var].values[:, ind_l, lat_min, lon_min].squeeze()
+                            df_tmp = pd.concat([df_tmp, pd.DataFrame(estrazione_tempi, index=[tempi], columns=[f'{lettera}_{l}'])], axis=1)
+
+                        df_estrazione = pd.concat([df_estrazione, df_tmp], axis=1)
+                        del (df_tmp)
+
+                    else:
+                        raise Exception('Caso non contemplato: ', nome_var, grib_dataType, grib_typeOfLevel, ds[nome_var].values.shape, len(ds[nome_var].values.shape))
+
+                    
+                # print(df_estrazione)
+                nome_df_estrazione = str(inizio_run).split(' ')[0]
+                # TODO troncare alla seconda cifra decimale, tranne i valori molto piccoli (es., 0,...)
+                df_estrazione.to_csv(f'{cartella_estrazione}/nome_df_estrazione.csv', index=True, header=True, mode='w', na_rep=np.nan)
+                sss
+
+    sss
 print('\n\nDone')
