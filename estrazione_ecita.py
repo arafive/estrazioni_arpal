@@ -122,7 +122,7 @@ for d in lista_date_start_forecast:
             cartella_estrazione = f_crea_cartella(f'{cartella_madre_estrazione}/{nome_var}/{grib_dataType}/{grib_typeOfLevel}')
 
             ds = lista_ds[df_sub_attrs.iloc[i]['id_ds']]
-            tempi = pd.to_datetime(ds['valid_time'].values) # equvalente (ma più robusto) di "pd.to_datetime([ds['time'].values + x for x in ds['step'].values])"
+            tempi = pd.to_datetime(ds['valid_time'].values) # equivalente (ma più robusto) di "pd.to_datetime([ds['time'].values + x for x in ds['step'].values])"
             lon_2D, lat_2D = np.meshgrid(ds['longitude'], ds['latitude'])
 
             for s in df_file_coordinate.index:
@@ -130,16 +130,16 @@ for d in lista_date_start_forecast:
                 lon_s = df_file_coordinate.loc[s, 'Longitude']
                 
                 distanze_2D = (np.abs(lon_2D - lon_s) + np.abs(lat_2D - lat_s))
-                distanze_1D = distanze_2D.flatten()
+                distanze_1D = np.sort(distanze_2D.flatten())
                 
-                for p, lettera in zip(range(int(config.get('COMMON', 'punti_piu_vicini_da_estrarre'))), list(string.ascii_uppercase)):
-                    print(p, lettera)
-                    # lat_min, lon_min = np.where(distanze == np.min(distanze))
-                
-                
+                for p, lettera, dist in zip(range(int(config.get('COMMON', 'punti_piu_vicini_da_estrarre'))), list(string.ascii_uppercase), distanze_1D):
+                    lat_min, lon_min = np.where(distanze_2D == dist)
+                    print(p, lettera, dist, lat_s, lat_2D[lat_min, lon_min][0], lon_s, lon_2D[lat_min, lon_min][0])
+                    
+                    # TODO prossima commit -> estrazione
+                sss
                 
                 
             
-                sss
 
 print('\n\nDone')
