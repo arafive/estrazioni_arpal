@@ -122,10 +122,12 @@ for d in lista_date_start_forecast:
 
             ds = lista_ds[df_sub_attrs.iloc[i]['id_ds']]
             tempi = pd.to_datetime(ds['valid_time'].values) # equvalente (ma più robusto) di "pd.to_datetime([ds['time'].values + x for x in ds['step'].values])"
+            lon_2D, lat_2D = np.meshgrid(ds['longitude'], ds['latitude'])
 
             for s in df_file_coordinate.index:
-                print(s)
+                lat_s = df_file_coordinate.loc[s, 'Latitude']
+                lon_s = df_file_coordinate.loc[s, 'Longitude']
             
-            sss
+                sss
 
 print('\n\nDone')
