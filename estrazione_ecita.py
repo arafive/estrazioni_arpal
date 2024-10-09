@@ -1,6 +1,7 @@
 
 import os
 import ast
+import string
 import cfgrib
 import configparser
 
@@ -127,6 +128,17 @@ for d in lista_date_start_forecast:
             for s in df_file_coordinate.index:
                 lat_s = df_file_coordinate.loc[s, 'Latitude']
                 lon_s = df_file_coordinate.loc[s, 'Longitude']
+                
+                distanze_2D = (np.abs(lon_2D - lon_s) + np.abs(lat_2D - lat_s))
+                distanze_1D = distanze_2D.flatten()
+                
+                for p, lettera in zip(range(int(config.get('COMMON', 'punti_piu_vicini_da_estrarre'))), list(string.ascii_uppercase)):
+                    print(p, lettera)
+                    # lat_min, lon_min = np.where(distanze == np.min(distanze))
+                
+                
+                
+                
             
                 sss
 
