@@ -136,16 +136,6 @@ def f_dataframe_ds_variabili(lista_ds):
 
     return df_attrs
 
-
-def truncate(f, n):
-    # https://stackoverflow.com/questions/783897/how-to-truncate-float-values
-    '''Truncates/pads a float f to n decimal places without rounding'''
-    s = '{}'.format(f)
-    if 'e' in s or 'E' in s:
-        return '{0:.{1}f}'.format(f, n)
-    i, p, d = s.partition('.')
-    return '.'.join([i, (d+'0'*n)[:n]])
-
 # %%
 
 config = configparser.ConfigParser()
