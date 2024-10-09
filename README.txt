@@ -8,3 +8,7 @@ oltre a 'id_ds' dove si trova la variabile. In questo modo posso estrarre le var
 
 Ci sono alcune variabili (es., cin, cape) che non hanno l'analisi (an). Ovviamente ci sta. Altre variabili (es., u10, v10)
 hanno sia l'analisi (an) che la previsione (fc).
+
+# TODO Controlla se il file esiste già per andare più veloce.
+
+# TODO aggiungi joblib

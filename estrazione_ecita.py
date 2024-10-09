@@ -13,10 +13,17 @@ from datetime import timedelta
 
 
 def f_log_ciclo_for(lista_di_liste):
-    """Log per un ciclo for."""
-    # lista_di_liste. Ogni lista contiene 3 elementi:
-    # Il primo è la descrizione, il secondo è l'elemento di ogni ciclo, il terzo è la lista iterata.
-
+    """Log per un ciclo for.
+    
+    Parameters
+    ----------
+    lista_di_liste : list
+        Lista_di_liste. Ogni lista contiene 3 elementi:
+        I   la descrizione
+        II  l'elemento di ogni ciclo
+        III la lista iterata
+        
+    """
     str_output = ''
     for n, i in enumerate(lista_di_liste, 1):
         assert len(i) == 3, 'Ci sono meno di 3 elementi. Modifica.'
@@ -149,19 +156,27 @@ lista_date_start_forecast = pd.date_range(f"{config.get('COMMON', 'data_inizio_e
 ### Ciclo sulle date
 for d in lista_date_start_forecast:
     t_inizio_d = time.time()
+    f_log_ciclo_for([['Data ', d, lista_date_start_forecast]])
     
     sub_cartella_grib = f'{d.year}/{d.month:02d}/{d.day:02d}'
 
     percorso_file_grib = f"{config.get('ECITA', 'percorso_cartella_grib')}/{sub_cartella_grib}"
     nome_file_grib = f"ecmf_0.1_{d.year}{d.month:02d}{d.day:02d}{config.get('COMMON', 'ora_start_forecast')}_181x161_2_20_34_50_undef_undef.grb"
 
+    if not os.path.exists(f'{percorso_file_grib}/{nome_file_grib}'):
+        print(f'!!! File {nome_file_grib} non presente nella cartella {percorso_file_grib}. Continuo')
+        continue
+        
     lista_ds = cfgrib.open_datasets(f'{percorso_file_grib}/{nome_file_grib}')
-
+    
     df_attrs = f_dataframe_ds_variabili(lista_ds)
 
     ### Ciclo sulle variabili
     for v in ast.literal_eval(config.get('ECITA', 'variabili_da_estratte')):
-        t_inizio_v = time.time()
+        
+        if not v in df_attrs.index:
+            print(f'!!! Variabile {v} non presente nel file {nome_file_grib}. Continuo')
+            continue
         
         df_sub_attrs = df_attrs.loc[v, :]
         
@@ -170,14 +185,12 @@ for d in lista_date_start_forecast:
         
         ### Ciclo sulla posizione degli indici
         for i in range(df_sub_attrs.shape[0]):
-            f_log_ciclo_for([['Data ', d, lista_date_start_forecast],
-                             [f'Variabile (indice {i}) ', v, ast.literal_eval(config.get('ECITA', 'variabili_da_estratte'))]])
+            # f_log_ciclo_for([['Data ', d, lista_date_start_forecast],
+            #                  [f'Variabile (indice {i}) ', v, ast.literal_eval(config.get('ECITA', 'variabili_da_estratte'))]])
             
             nome_var = df_sub_attrs.index[0]
             grib_dataType = df_sub_attrs.iloc[i]['GRIB_dataType']
             grib_typeOfLevel = df_sub_attrs.iloc[i]['GRIB_typeOfLevel']
-
-            cartella_estrazione = f_crea_cartella(f"{cartella_madre_estrazione}/{config.get('COMMON', 'ora_start_forecast')}/{nome_var}/{grib_dataType}/{grib_typeOfLevel}", print_messaggio=False)
 
             ds = lista_ds[df_sub_attrs.iloc[i]['id_ds']]
             inizio_run = pd.to_datetime(ds['time'].values)
@@ -191,10 +204,8 @@ for d in lista_date_start_forecast:
 
             ### Ciclo sulle stazioni
             for s in df_file_coordinate.index:
-                # f_log_ciclo_for([['Data ', d, lista_date_start_forecast],
-                #                  [f'Variabile (indice {i}) ', v, ast.literal_eval(config.get('ECITA', 'variabili_da_estratte'))],
-                #                  ['Stazione ', s, df_file_coordinate.index.to_list()]])
-                
+                cartella_estrazione = f_crea_cartella(f"{cartella_madre_estrazione}/{config.get('COMMON', 'ora_start_forecast')}/{nome_var}/{grib_dataType}/{grib_typeOfLevel}/{s}", print_messaggio=False)
+
                 lat_s = df_file_coordinate.loc[s, 'Latitude']
                 lon_s = df_file_coordinate.loc[s, 'Longitude']
                 
@@ -237,11 +248,11 @@ for d in lista_date_start_forecast:
                         raise Exception('Caso non contemplato: ', nome_var, grib_dataType, grib_typeOfLevel, ds[nome_var].values.shape, len(ds[nome_var].values.shape))
                     
                 # TODO troncare alla seconda cifra decimale, tranne i valori molto piccoli (es., 0,...)
+                # df_estrazione = df_estrazione.round(decimals=3)
                 df_estrazione.to_csv(f"{cartella_estrazione}/{str(inizio_run).split(' ')[0]}.csv", index=True, header=True, mode='w', na_rep=np.nan)
-
-        f_printa_tempo_trascorso(t_inizio_v, time.time(), nota=f'Tempo il campo v = {v}')
-        print()
-
+                sss
     f_printa_tempo_trascorso(t_inizio_d, time.time(), nota=f'Tempo per d = {d}')
+    print()
+    
     sss
 print('\n\nDone')
