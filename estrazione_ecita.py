@@ -1,6 +1,7 @@
 
 import os
 import ast
+import time
 import string
 import cfgrib
 import configparser
@@ -8,7 +9,9 @@ import configparser
 import numpy as np
 import pandas as pd
 
-def f_crea_cartella(percorso_cartella):
+from datetime import timedelta
+
+def f_crea_cartella(percorso_cartella, print_messaggio=True):
     """Crea una cartella, printa per conferma e ritorna il percorso.
     
     Parameters
@@ -23,13 +26,53 @@ def f_crea_cartella(percorso_cartella):
 
     """
     os.makedirs(percorso_cartella, exist_ok=True)
-    print(f'Creata cartella {percorso_cartella}\n')
+    if print_messaggio:
+        print(f'Creata cartella {percorso_cartella}\n')
 
     return percorso_cartella
 
 
-def f_dizionario_ds_variabili(lista_ds):
-    """Ritorna il dizionario che lega dataset alle variabili.
+def f_printa_tempo_trascorso(t_inizio, t_fine, nota=False):
+    """Printa il tempo trascorso.
+    
+    Parameters
+    ----------
+    t_inizio : float
+        Tempo iniziale generato con time.time().
+    t_fine : float
+        Tempo finale generato con time.time().
+
+    """
+    elapsed_tempo = timedelta(seconds=t_fine-t_inizio)
+    
+    giorni = f'{elapsed_tempo.days:01}'
+    ore = f'{elapsed_tempo.seconds//3600:02}'
+    minuti = f'{elapsed_tempo.seconds//60%60:02}'
+    secondi = f'{elapsed_tempo.seconds%60:02}'
+    millisecondi = elapsed_tempo.microseconds/1000
+    
+    msg = f'\n>>> {int(secondi)}.{int(millisecondi)} sec'
+
+    if int(minuti) > 0:
+        msg = f'\n>>> {minuti}:{secondi} min'
+    
+    if int(ore) > 0:
+        msg = f'\n>>> {ore}:{minuti}:{secondi} ore'
+    
+    if int(giorni) > 0:
+        if int(giorni) == 1:
+            msg = f'\n>>> {giorni} giorno, {ore}:{minuti}:{secondi} ore'
+        else:
+            msg = f'\n>>> {giorni} giorni, {ore}:{minuti}:{secondi} ore'
+    
+    if nota:
+        msg = msg[:4] + f' {nota}: ' + msg[5:]
+        
+    print(msg)
+    
+
+def f_dataframe_ds_variabili(lista_ds):
+    """Ritorna il dataframe che lega dataset alle variabili.
     
     Parameters
     ----------
@@ -38,27 +81,15 @@ def f_dizionario_ds_variabili(lista_ds):
 
     Returns
     -------
-    dict_ds_variabili : dict
-        Dizionario dove le chiavi sono le variabili e
-        i valori delle liste che contengono gli indici
-        dei dataset in 'lista_ds' che contengono
-        quella variabile.
     df_attributi : pandas.core.frame.DataFrame
         Il dataframe che contiene gli attributi, oltre
         all'indice del dataset che contiene quella variabile.
 
     """
-    dict_ds_variabili = {}
     df_attrs = pd.DataFrame()
     
     for i, ds in enumerate(lista_ds):
-        
         for v in [x for x in ds.data_vars]:
-            if v not in dict_ds_variabili.keys():
-                dict_ds_variabili[v] = [i]
-            else:
-                dict_ds_variabili[v].append(i)
-
             df_attrs = pd.concat([df_attrs, pd.DataFrame({**{'id_ds': i},  **ds[v].attrs}, index=[v])])
             
     ### Elimino le colonne i vuoi valori sono comuni a tutte le righe
@@ -75,7 +106,7 @@ def f_dizionario_ds_variabili(lista_ds):
     if 'GRIB_dataType' not in df_attrs:
         df_attrs['GRIB_dataType'] = 'fc' # Nei grib più recenti 'an' e 'fc' sono uniti
 
-    return dict_ds_variabili, df_attrs
+    return df_attrs
 
 # %%
 
@@ -97,29 +128,28 @@ lista_date_start_forecast = pd.date_range(f"{config.get('COMMON', 'data_inizio_e
 ### Ciclo sulle date
 for d in lista_date_start_forecast:
     sub_cartella_grib = f'{d.year}/{d.month:02d}/{d.day:02d}'
-    print(sub_cartella_grib)
 
     percorso_file_grib = f"{config.get('ECITA', 'percorso_cartella_grib')}/{sub_cartella_grib}"
     nome_file_grib = f"ecmf_0.1_{d.year}{d.month:02d}{d.day:02d}{config.get('COMMON', 'ora_start_forecast')}_181x161_2_20_34_50_undef_undef.grb"
 
-    lista_ds = cfgrib.open_datasets(f'{percorso_file_grib}/{nome_file_grib}',
-                                    indexpath=f'/tmp/{nome_file_grib}.idx')
+    lista_ds = cfgrib.open_datasets(f'{percorso_file_grib}/{nome_file_grib}')
 
-    dict_ds_variabili, df_attrs = f_dizionario_ds_variabili(lista_ds)
-
-# %%    
+    df_attrs = f_dataframe_ds_variabili(lista_ds)
+    sss
+    ### Ciclo sulle variabili
     for v in ast.literal_eval(config.get('ECITA', 'variabili_da_estratte')):
         df_sub_attrs = df_attrs.loc[v, :]
         
         if type(df_sub_attrs) == pd.core.series.Series:
             df_sub_attrs = df_sub_attrs.to_frame().T
         
-        for i in range(df_sub_attrs.shape[0]): # ciclo sulla posizione degli indici
+        ### Ciclo sulla posizione degli indici
+        for i in range(df_sub_attrs.shape[0]):
             nome_var = df_sub_attrs.index[0]
             grib_dataType = df_sub_attrs.iloc[i]['GRIB_dataType']
             grib_typeOfLevel = df_sub_attrs.iloc[i]['GRIB_typeOfLevel']
 
-            cartella_estrazione = f_crea_cartella(f"{cartella_madre_estrazione}/{config.get('COMMON', 'ora_start_forecast')}/{nome_var}/{grib_dataType}/{grib_typeOfLevel}")
+            cartella_estrazione = f_crea_cartella(f"{cartella_madre_estrazione}/{config.get('COMMON', 'ora_start_forecast')}/{nome_var}/{grib_dataType}/{grib_typeOfLevel}", print_messaggio=False)
 
             ds = lista_ds[df_sub_attrs.iloc[i]['id_ds']]
             inizio_run = pd.to_datetime(ds['time'].values)
@@ -131,8 +161,8 @@ for d in lista_date_start_forecast:
             else:
                 livelli = ds[grib_typeOfLevel].values
 
-            # for s in df_file_coordinate.index:
-            for s in df_file_coordinate.index[0:1]:
+            ### Ciclo sulle stazioni
+            for s in df_file_coordinate.index:
                 lat_s = df_file_coordinate.loc[s, 'Latitude']
                 lon_s = df_file_coordinate.loc[s, 'Longitude']
                 
@@ -141,11 +171,9 @@ for d in lista_date_start_forecast:
                 
                 df_estrazione = pd.DataFrame()
 
-                # TODO prossima commit -> estrazione
-
+                ### Ciclo sui punti
                 for p, lettera, dist in zip(range(int(config.get('COMMON', 'punti_piu_vicini_da_estrarre'))), list(string.ascii_uppercase), distanze_1D):
                     lat_min, lon_min = np.where(distanze_2D == dist)
-                    # print(p, lettera, dist, lat_s, lat_2D[lat_min, lon_min][0], lon_s, lon_2D[lat_min, lon_min][0])
 
                     if grib_dataType == 'an' and grib_typeOfLevel in ['surface', 'potentialVorticity'] and len(ds[nome_var].values.shape) == 2:
                         ### (latitudini, longitudini)
@@ -176,12 +204,11 @@ for d in lista_date_start_forecast:
 
                     else:
                         raise Exception('Caso non contemplato: ', nome_var, grib_dataType, grib_typeOfLevel, ds[nome_var].values.shape, len(ds[nome_var].values.shape))
-
                     
-                # print(df_estrazione)
                 nome_df_estrazione = str(inizio_run).split(' ')[0]
                 # TODO troncare alla seconda cifra decimale, tranne i valori molto piccoli (es., 0,...)
-                df_estrazione.to_csv(f'{cartella_estrazione}/nome_df_estrazione.csv', index=True, header=True, mode='w', na_rep=np.nan)
+                # TODO Rimuovi e aggiusta f_dizionario_ds_variabili
+                df_estrazione.to_csv(f'{cartella_estrazione}/{nome_df_estrazione}.csv', index=True, header=True, mode='w', na_rep=np.nan)
                 sss
 
     sss
