@@ -81,7 +81,7 @@ def f_dizionario_ds_variabili(lista_ds):
 config = configparser.ConfigParser()
 config.read('./config.ini')
 
-cartella_madre_estrazione = f_crea_cartella(config.get('COMMON', 'cartella_madre_estrazione'))
+cartella_madre_estrazione = f_crea_cartella(f"{config.get('COMMON', 'cartella_madre_estrazione')}/ECMWF")
 
 df_file_coordinate = pd.read_csv(config.get('COMMON', 'percorso_file_coordinate'), index_col=0)
 assert 'Latitude' in df_file_coordinate.columns
@@ -114,6 +114,18 @@ for d in lista_date_start_forecast:
             df_sub_attrs = df_sub_attrs.to_frame().T
         
         for i in range(df_sub_attrs.shape[0]): # ciclo sulla posizione degli indici
-            print(df_sub_attrs.index[0], df_sub_attrs.iloc[i]['GRIB_dataType'], df_sub_attrs.iloc[i]['GRIB_typeOfLevel'])
+            nome_var = df_sub_attrs.index[0]
+            grib_dataType = df_sub_attrs.iloc[i]['GRIB_dataType']
+            grib_typeOfLevel = df_sub_attrs.iloc[i]['GRIB_typeOfLevel']
+
+            cartella_estrazione = f_crea_cartella(f'{cartella_madre_estrazione}/{nome_var}/{grib_dataType}/{grib_typeOfLevel}')
+
+            ds = lista_ds[df_sub_attrs.iloc[i]['id_ds']]
+            tempi = pd.to_datetime(ds['valid_time'].values) # equvalente (ma più robusto) di "pd.to_datetime([ds['time'].values + x for x in ds['step'].values])"
+
+            for s in df_file_coordinate.index:
+                print(s)
+            
+            sss
 
 print('\n\nDone')
