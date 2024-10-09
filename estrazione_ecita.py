@@ -136,6 +136,16 @@ def f_dataframe_ds_variabili(lista_ds):
 
     return df_attrs
 
+
+def truncate(f, n):
+    # https://stackoverflow.com/questions/783897/how-to-truncate-float-values
+    '''Truncates/pads a float f to n decimal places without rounding'''
+    s = '{}'.format(f)
+    if 'e' in s or 'E' in s:
+        return '{0:.{1}f}'.format(f, n)
+    i, p, d = s.partition('.')
+    return '.'.join([i, (d+'0'*n)[:n]])
+
 # %%
 
 config = configparser.ConfigParser()
@@ -247,12 +257,39 @@ for d in lista_date_start_forecast:
                     else:
                         raise Exception('Caso non contemplato: ', nome_var, grib_dataType, grib_typeOfLevel, ds[nome_var].values.shape, len(ds[nome_var].values.shape))
                     
-                # TODO troncare alla seconda cifra decimale, tranne i valori molto piccoli (es., 0,...)
-                # df_estrazione = df_estrazione.round(decimals=3)
                 df_estrazione.to_csv(f"{cartella_estrazione}/{str(inizio_run).split(' ')[0]}.csv", index=True, header=True, mode='w', na_rep=np.nan)
-                sss
+                
     f_printa_tempo_trascorso(t_inizio_d, time.time(), nota=f'Tempo per d = {d}')
     print()
     
-    sss
 print('\n\nDone')
+
+# %% Test di troncaggio
+
+# def f_tronca(a, digits=3):
+#     a = str(a)
+    
+#     a_prima = a.split('.')[0]
+
+#     try:
+#         a_dopo = a.split('.')[1]
+#     except IndexError:
+#         return float(a)
+    
+#     indice_ultimo_zero = a_dopo.rfind('0')
+
+#     # if indice_ultimo_zero < int(np.ceil(len(a_dopo) / 2)):
+#     #     return np.round(float(a), digits)
+    
+#     if indice_ultimo_zero == -1:
+#         return np.round(float(a), digits)
+    
+#     a_dopo_nuova = a_dopo[:indice_ultimo_zero] + a_dopo[indice_ultimo_zero:indice_ultimo_zero + digits + 1]
+
+#     a_nuova = float(a_prima + '.' + a_dopo_nuova)
+
+#     return float(a_nuova)
+
+# f_tronca(-2.12961, 3)
+# a = df_estrazione.applymap(f_tronca, digits=3)
+# # a = df_estrazione.applymap(np.round, decimals=3)
