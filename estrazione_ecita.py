@@ -58,7 +58,6 @@ def f_dizionario_ds_variabili(lista_ds):
             else:
                 dict_ds_variabili[v].append(i)
 
-            # df_attrs = pd.concat([df_attrs, pd.DataFrame({'id_ds': i} | ds[v].attrs, index=[v])]) # solo per python >= 3.9
             df_attrs = pd.concat([df_attrs, pd.DataFrame({**{'id_ds': i},  **ds[v].attrs}, index=[v])])
             
     ### Elimino le colonne i vuoi valori sono comuni a tutte le righe
@@ -106,19 +105,15 @@ for d in lista_date_start_forecast:
                                     indexpath=f'/tmp/{nome_file_grib}.idx')
 
     dict_ds_variabili, df_attrs = f_dizionario_ds_variabili(lista_ds)
-    sss
+
+# %%    
     for v in ast.literal_eval(config.get('ECITA', 'variabili_da_estratte')):
-        df_sub_attrs = df_attrs.loc[v]
-        # TODO alla prossima commit -> cicla correttamente sulla tripletta per creare le cartelle
+        df_sub_attrs = df_attrs.loc[v, :]
         
-        # for i in df_sub_attrs.index:
-            # print(i)
-
-        # print(v, df_attrs.loc[v, 'GRIB_dataType'], df_attrs.loc[v, 'GRIB_typeOfLevel'])
-        # print()
-
-        # sss
+        if type(df_sub_attrs) == pd.core.series.Series:
+            df_sub_attrs = df_sub_attrs.to_frame().T
         
-    
+        for i in range(df_sub_attrs.shape[0]): # ciclo sulla posizione degli indici
+            print(df_sub_attrs.index[0], df_sub_attrs.iloc[i]['GRIB_dataType'], df_sub_attrs.iloc[i]['GRIB_typeOfLevel'])
 
 print('\n\nDone')
