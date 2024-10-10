@@ -4,6 +4,7 @@ import ast
 import time
 import string
 import cfgrib
+import warnings
 import configparser
 
 import numpy as np
@@ -11,6 +12,10 @@ import pandas as pd
 
 from datetime import timedelta
 
+from joblib import delayed
+from joblib import Parallel
+
+warnings.filterwarnings('ignore', category=RuntimeWarning, message='overflow encountered in cast')
 
 def f_log_ciclo_for(lista_di_liste):
     """Log per un ciclo for.
@@ -149,14 +154,14 @@ def f_round(a, digits=3):
 
     Returns
     -------
-    np.float16
+    np.float32
 
     """
     if str(a).split('.')[0] == '0':
-        return np.float16(a)
+        return np.float32(a)
     
     else:
-        return np.float16(np.round(a, decimals=digits))
+        return np.float32(np.round(a, decimals=digits))
 
 # %%
 
@@ -175,8 +180,7 @@ lista_date_start_forecast = pd.date_range(f"{config.get('COMMON', 'data_inizio_e
                                           f"{config.get('COMMON', 'data_fine_estrazione')} {config.get('COMMON', 'ora_start_forecast')}:00:00",
                                           freq='1D')
 
-### Ciclo sulle date
-for d in lista_date_start_forecast:
+def f_estrazione(d):
     t_inizio_d = time.time()
     # f_log_ciclo_for([['Data ', d, lista_date_start_forecast]])
     
@@ -187,7 +191,7 @@ for d in lista_date_start_forecast:
 
     if not os.path.exists(f'{percorso_file_grib}/{nome_file_grib}'):
         print(f'!!! File {nome_file_grib} non presente nella cartella {percorso_file_grib}. Continuo')
-        continue
+        return
         
     lista_ds = cfgrib.open_datasets(f'{percorso_file_grib}/{nome_file_grib}',
                                     indexpath=f'/tmp/{nome_file_grib}.idx')
@@ -240,9 +244,9 @@ for d in lista_date_start_forecast:
                 
                 df_estrazione = pd.DataFrame()
                 
-                # if os.path.exists(f"{cartella_estrazione}/{str(inizio_run).split(' ')[0]}.csv"):
-                #     # print(f"{cartella_estrazione}/{str(inizio_run).split(' ')[0]}.csv esiste. Continuo." )
-                #     continue
+                if os.path.exists(f"{cartella_estrazione}/{str(inizio_run).split(' ')[0]}.csv"):
+                    # print(f"{cartella_estrazione}/{str(inizio_run).split(' ')[0]}.csv esiste. Continuo." )
+                    continue
 
                 ### Ciclo sui punti
                 for p, lettera, dist in zip(range(int(config.get('COMMON', 'punti_piu_vicini_da_estrarre'))), list(string.ascii_uppercase), distanze_1D):
@@ -284,6 +288,17 @@ for d in lista_date_start_forecast:
                 
     f_printa_tempo_trascorso(t_inizio_d, time.time(), nota=f'Tempo per d = {d}')
     print()
-    # sss
+    sss
+# # # # # # # #   # # # # # # # #   # # # # # # # #
+# # # # # # # #   # # # # # # # #   # # # # # # # #
+# # # # # # # #   # # # # # # # #   # # # # # # # #
+
+if int(config.get('COMMON', 'job_joblib')) == 0:
+    ### Ciclo sulle date
+    for d in lista_date_start_forecast:
+        f_estrazione(d)
+    
+else:
+    Parallel(n_jobs=int(config.get('COMMON', 'job_joblib')), verbose=1000)(delayed(f_estrazione)(d) for d in lista_date_start_forecast)
     
 print('\n\nDone')
