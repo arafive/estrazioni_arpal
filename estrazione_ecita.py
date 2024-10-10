@@ -4,7 +4,6 @@ import ast
 import time
 import string
 import cfgrib
-import warnings
 import configparser
 
 import numpy as np
@@ -14,8 +13,6 @@ from datetime import timedelta
 
 from joblib import delayed
 from joblib import Parallel
-
-warnings.filterwarnings('ignore', category=RuntimeWarning, message='overflow encountered in cast')
 
 def f_log_ciclo_for(lista_di_liste):
     """Log per un ciclo for.
@@ -288,7 +285,7 @@ def f_estrazione(d):
                 
     f_printa_tempo_trascorso(t_inizio_d, time.time(), nota=f'Tempo per d = {d}')
     print()
-    sss
+
 # # # # # # # #   # # # # # # # #   # # # # # # # #
 # # # # # # # #   # # # # # # # #   # # # # # # # #
 # # # # # # # #   # # # # # # # #   # # # # # # # #
