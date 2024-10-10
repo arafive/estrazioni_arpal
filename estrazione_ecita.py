@@ -137,6 +137,27 @@ def f_dataframe_ds_variabili(lista_ds):
     return df_attrs
 
 
+def f_round(a, digits=3):
+    """Arrotonda i float.
+
+    Parameters
+    ----------
+    a : float
+        Un numero.
+    digits : int, optional
+        Quante cifre dopo la virgola mantenere. The default is 3.
+
+    Returns
+    -------
+    np.float16
+
+    """
+    if str(a).split('.')[0] == '0':
+        return np.float16(a)
+    
+    else:
+        return np.float16(np.round(a, decimals=digits))
+
 # %%
 
 config = configparser.ConfigParser()
@@ -219,9 +240,9 @@ for d in lista_date_start_forecast:
                 
                 df_estrazione = pd.DataFrame()
                 
-                if os.path.exists(f"{cartella_estrazione}/{str(inizio_run).split(' ')[0]}.csv"):
-                    # print(f"{cartella_estrazione}/{str(inizio_run).split(' ')[0]}.csv esiste. Continuo." )
-                    continue
+                # if os.path.exists(f"{cartella_estrazione}/{str(inizio_run).split(' ')[0]}.csv"):
+                #     # print(f"{cartella_estrazione}/{str(inizio_run).split(' ')[0]}.csv esiste. Continuo." )
+                #     continue
 
                 ### Ciclo sui punti
                 for p, lettera, dist in zip(range(int(config.get('COMMON', 'punti_piu_vicini_da_estrarre'))), list(string.ascii_uppercase), distanze_1D):
@@ -256,6 +277,7 @@ for d in lista_date_start_forecast:
                     else:
                         raise Exception('Caso non contemplato: ', nome_var, grib_dataType, grib_typeOfLevel, ds[nome_var].values.shape, len(ds[nome_var].values.shape))
                     
+                df_estrazione = df_estrazione.astype(float).applymap(f_round, digits=3)
                 df_estrazione.to_csv(f"{cartella_estrazione}/{str(inizio_run).split(' ')[0]}.csv", index=True, header=True, mode='w', na_rep=np.nan)
                 
             # f_printa_tempo_trascorso(t_inizio_v, time.time(), nota=f'Tempo per variabile {v}')
@@ -265,62 +287,3 @@ for d in lista_date_start_forecast:
     # sss
     
 print('\n\nDone')
-
-# %% Test di troncaggio
-
-# def f_tronca(a, digits=3):
-#     a = str(a)
-    
-#     a_prima = a.split('.')[0]
-
-#     try:
-#         a_dopo = a.split('.')[1]
-#     except IndexError:
-#         return float(a)
-    
-#     indice_ultimo_zero = a_dopo.rfind('0')
-
-#     # if indice_ultimo_zero < int(np.ceil(len(a_dopo) / 2)):
-#     #     return np.round(float(a), digits)
-    
-#     if indice_ultimo_zero == -1:
-#         return np.round(float(a), digits)
-    
-#     a_dopo_nuova = a_dopo[:indice_ultimo_zero] + a_dopo[indice_ultimo_zero:indice_ultimo_zero + digits + 1]
-
-#     a_nuova = float(a_prima + '.' + a_dopo_nuova)
-
-#     return float(a_nuova)
-
-# f_tronca(-2.12961, 3)
-# a = df_estrazione.applymap(f_tronca, digits=3)
-# # a = df_estrazione.applymap(np.round, decimals=3)
-
-# ------------------ altro test di troncaggio
-
-# import copy
-
-# a = 0.000000112345
-# # m = 10
-
-# # a = a * m
-# # a = np.round(a, 3)
-# # print(a)
-# # a = a / m
-
-# ### Tentativo n. 1
-# m = 1
-# a_orig = copy.copy(a)
-# while True:
-#     a = a * m
-#     a = np.round(a, 3)
-#     a = a / m
-#     print(a)
-#     if '0' in str(a)[-3:]:
-#         a = copy.copy(a_orig) 
-#         m *= 10
-#     else:
-#         break
-
-# a = np.float16(a)
-# print(a)
