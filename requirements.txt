@@ -7,3 +7,4 @@ cartopy
 xarray
 spyder-kernels==2.5.*
 cfgrib
+joblib
