@@ -71,13 +71,13 @@ def f_printa_tempo_trascorso(t_inizio, t_fine, nota=False):
         Tempo finale generato con time.time().
 
     """
-    elapsed_tempo = timedelta(seconds=t_fine-t_inizio)
+    elapsed_tempo = timedelta(seconds=t_fine - t_inizio)
     
     giorni = f'{elapsed_tempo.days:01}'
     ore = f'{elapsed_tempo.seconds//3600:02}'
     minuti = f'{elapsed_tempo.seconds//60%60:02}'
     secondi = f'{elapsed_tempo.seconds%60:02}'
-    millisecondi = elapsed_tempo.microseconds/1000
+    millisecondi = elapsed_tempo.microseconds / 1000
     
     msg = f'\n>>> {int(secondi)}.{int(millisecondi)} sec'
 
@@ -118,7 +118,7 @@ def f_dataframe_ds_variabili(lista_ds):
     
     for i, ds in enumerate(lista_ds):
         for v in [x for x in ds.data_vars]:
-            df_attrs = pd.concat([df_attrs, pd.DataFrame({**{'id_ds': i},  **ds[v].attrs}, index=[v])])
+            df_attrs = pd.concat([df_attrs, pd.DataFrame({**{'id_ds': i}, **ds[v].attrs}, index=[v])])
             
     ### Elimino le colonne i vuoi valori sono comuni a tutte le righe
     for i in df_attrs:
@@ -137,6 +137,7 @@ def f_dataframe_ds_variabili(lista_ds):
     return df_attrs
 
 # %%
+
 
 config = configparser.ConfigParser()
 config.read('./config.ini')
@@ -167,14 +168,15 @@ for d in lista_date_start_forecast:
         print(f'!!! File {nome_file_grib} non presente nella cartella {percorso_file_grib}. Continuo')
         continue
         
-    lista_ds = cfgrib.open_datasets(f'{percorso_file_grib}/{nome_file_grib}')
+    lista_ds = cfgrib.open_datasets(f'{percorso_file_grib}/{nome_file_grib}',
+                                    indexpath=f'/tmp/{nome_file_grib}.idx')
     
     df_attrs = f_dataframe_ds_variabili(lista_ds)
 
     ### Ciclo sulle variabili
     for v in ast.literal_eval(config.get('ECITA', 'variabili_da_estratte')):
         
-        if not v in df_attrs.index:
+        if v not in df_attrs.index:
             print(f'!!! Variabile {v} non presente nel file {nome_file_grib}. Continuo')
             continue
         
@@ -251,6 +253,7 @@ for d in lista_date_start_forecast:
                 
     f_printa_tempo_trascorso(t_inizio_d, time.time(), nota=f'Tempo per d = {d}')
     print()
+    sss
     
 print('\n\nDone')
 
