@@ -136,8 +136,8 @@ def f_dataframe_ds_variabili(lista_ds):
 
     return df_attrs
 
-# %%
 
+# %%
 
 config = configparser.ConfigParser()
 config.read('./config.ini')
@@ -157,7 +157,7 @@ lista_date_start_forecast = pd.date_range(f"{config.get('COMMON', 'data_inizio_e
 ### Ciclo sulle date
 for d in lista_date_start_forecast:
     t_inizio_d = time.time()
-    f_log_ciclo_for([['Data ', d, lista_date_start_forecast]])
+    # f_log_ciclo_for([['Data ', d, lista_date_start_forecast]])
     
     sub_cartella_grib = f'{d.year}/{d.month:02d}/{d.day:02d}'
 
@@ -172,7 +172,7 @@ for d in lista_date_start_forecast:
                                     indexpath=f'/tmp/{nome_file_grib}.idx')
     
     df_attrs = f_dataframe_ds_variabili(lista_ds)
-
+    
     ### Ciclo sulle variabili
     for v in ast.literal_eval(config.get('ECITA', 'variabili_da_estratte')):
         
@@ -184,17 +184,20 @@ for d in lista_date_start_forecast:
         
         if type(df_sub_attrs) == pd.core.series.Series:
             df_sub_attrs = df_sub_attrs.to_frame().T
-        
+
         ### Ciclo sulla posizione degli indici
         for i in range(df_sub_attrs.shape[0]):
+            t_inizio_v = time.time()
+            
             # f_log_ciclo_for([['Data ', d, lista_date_start_forecast],
-            #                  [f'Variabile (indice {i}) ', v, ast.literal_eval(config.get('ECITA', 'variabili_da_estratte'))]])
+            #                   [f'Variabile (indice {i}) ', v, ast.literal_eval(config.get('ECITA', 'variabili_da_estratte'))]])
             
             nome_var = df_sub_attrs.index[0]
             grib_dataType = df_sub_attrs.iloc[i]['GRIB_dataType']
             grib_typeOfLevel = df_sub_attrs.iloc[i]['GRIB_typeOfLevel']
 
             ds = lista_ds[df_sub_attrs.iloc[i]['id_ds']]
+            
             inizio_run = pd.to_datetime(ds['time'].values)
             tempi = pd.to_datetime(ds['valid_time'].values) # equivalente (ma più robusto) di "pd.to_datetime([ds['time'].values + x for x in ds['step'].values])"
             lon_2D, lat_2D = np.meshgrid(ds['longitude'], ds['latitude'])
@@ -207,7 +210,7 @@ for d in lista_date_start_forecast:
             ### Ciclo sulle stazioni
             for s in df_file_coordinate.index:
                 cartella_estrazione = f_crea_cartella(f"{cartella_madre_estrazione}/{config.get('COMMON', 'ora_start_forecast')}/{nome_var}/{grib_dataType}/{grib_typeOfLevel}/{s}", print_messaggio=False)
-
+                
                 lat_s = df_file_coordinate.loc[s, 'Latitude']
                 lon_s = df_file_coordinate.loc[s, 'Longitude']
                 
@@ -215,6 +218,10 @@ for d in lista_date_start_forecast:
                 distanze_1D = np.sort(distanze_2D.flatten())
                 
                 df_estrazione = pd.DataFrame()
+                
+                if os.path.exists(f"{cartella_estrazione}/{str(inizio_run).split(' ')[0]}.csv"):
+                    # print(f"{cartella_estrazione}/{str(inizio_run).split(' ')[0]}.csv esiste. Continuo." )
+                    continue
 
                 ### Ciclo sui punti
                 for p, lettera, dist in zip(range(int(config.get('COMMON', 'punti_piu_vicini_da_estrarre'))), list(string.ascii_uppercase), distanze_1D):
@@ -251,9 +258,11 @@ for d in lista_date_start_forecast:
                     
                 df_estrazione.to_csv(f"{cartella_estrazione}/{str(inizio_run).split(' ')[0]}.csv", index=True, header=True, mode='w', na_rep=np.nan)
                 
+            # f_printa_tempo_trascorso(t_inizio_v, time.time(), nota=f'Tempo per variabile {v}')
+                
     f_printa_tempo_trascorso(t_inizio_d, time.time(), nota=f'Tempo per d = {d}')
     print()
-    sss
+    # sss
     
 print('\n\nDone')
 
@@ -286,3 +295,32 @@ print('\n\nDone')
 # f_tronca(-2.12961, 3)
 # a = df_estrazione.applymap(f_tronca, digits=3)
 # # a = df_estrazione.applymap(np.round, decimals=3)
+
+# ------------------ altro test di troncaggio
+
+# import copy
+
+# a = 0.000000112345
+# # m = 10
+
+# # a = a * m
+# # a = np.round(a, 3)
+# # print(a)
+# # a = a / m
+
+# ### Tentativo n. 1
+# m = 1
+# a_orig = copy.copy(a)
+# while True:
+#     a = a * m
+#     a = np.round(a, 3)
+#     a = a / m
+#     print(a)
+#     if '0' in str(a)[-3:]:
+#         a = copy.copy(a_orig) 
+#         m *= 10
+#     else:
+#         break
+
+# a = np.float16(a)
+# print(a)

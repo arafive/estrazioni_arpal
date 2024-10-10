@@ -13,4 +13,4 @@ hanno sia l'analisi (an) che la previsione (fc).
 
 # TODO aggiungi joblib
 
-# TODO troncare alla seconda cifra decimale, tranne i valori molto piccoli (es., 0,...)
+# TODO troncare alla seconda cifra decimale, tranne i valori molto piccoli (es., 0,...). Devo trovare un round furbo...
