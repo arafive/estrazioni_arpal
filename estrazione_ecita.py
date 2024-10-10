@@ -193,8 +193,10 @@ def f_estrazione(d):
     lista_ds = cfgrib.open_datasets(f'{percorso_file_grib}/{nome_file_grib}',
                                     indexpath=f'/tmp/{nome_file_grib}.idx')
     
+    global df_attrs
     df_attrs = f_dataframe_ds_variabili(lista_ds)
     
+    sss
     ### Ciclo sulle variabili
     for v in ast.literal_eval(config.get('ECITA', 'variabili_da_estratte')):
         
@@ -260,6 +262,11 @@ def f_estrazione(d):
                         ### (livelli, latitudini, longitudini)
                         estrazione = ds[nome_var].values[:, lat_min, lon_min].squeeze()
                         df_estrazione = pd.concat([df_estrazione, pd.DataFrame(estrazione, index=[livelli], columns=[lettera])], axis=1)
+
+                    elif grib_dataType == 'fc' and grib_typeOfLevel == 'potentialVorticity' and len(ds[nome_var].values.shape) == 2:
+                        ### (latitudini, longitudini)
+                        estrazione = ds[nome_var].values[lat_min, lon_min]
+                        df_estrazione = pd.concat([df_estrazione, pd.DataFrame(estrazione, index=[tempi], columns=[lettera])], axis=1)
 
                     elif grib_dataType == 'fc' and grib_typeOfLevel in ['surface', 'potentialVorticity'] and len(ds[nome_var].values.shape) == 3:
                         ### (tempi, latitudini, longitudini)
