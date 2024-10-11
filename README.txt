@@ -9,10 +9,8 @@ oltre a 'id_ds' dove si trova la variabile. In questo modo posso estrarre le var
 Ci sono alcune variabili (es., cin, cape) che non hanno l'analisi (an). Ovviamente ci sta. Altre variabili (es., u10, v10)
 hanno sia l'analisi (an) che la previsione (fc).
 
-# TODO Fin'ora prendo gli N punti più vicini, vorrei poter prendere anche gli N punti all'interno di un raggio R attorno al punto stazione
+# TODO Fin'ora prendo gli N punti più vicini, vorrei poter prendere anche gli N punti all'interno di un raggio R attorno al punto stazione -> haversine
 
 # TODO Per ora la mia funzione di arrotondamento fa il round solo se il numero non è 0.qualcosa;
 
 # TODO Fare un salvataggio più intelligente e razionale degli output (pkl ?)
-
-risolvi problemi nei file .log

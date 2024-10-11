@@ -167,7 +167,7 @@ def f_round(a, digits=3):
 config = configparser.ConfigParser()
 config.read('./config.ini')
 
-cartella_madre_estrazione = f_crea_cartella(f"{config.get('COMMON', 'cartella_madre_estrazione')}/BOLAM")
+cartella_madre_estrazione = f_crea_cartella(f"{config.get('COMMON', 'cartella_madre_estrazione')}/MOLOCH")
 
 df_file_coordinate = pd.read_csv(config.get('COMMON', 'percorso_file_coordinate'), index_col=0)
 assert 'Latitude' in df_file_coordinate.columns
@@ -180,26 +180,25 @@ lista_date_start_forecast = pd.date_range(f"{config.get('COMMON', 'data_inizio_e
                                           freq='1D')
 
 
-def f_estrazione(d):
-# for d in lista_date_start_forecast:
+# def f_estrazione(d):
+for d in lista_date_start_forecast:
     t_inizio_d = time.time()
     f_log_ciclo_for([['Data ', d, lista_date_start_forecast]])
     
     sub_cartella_grib = f'{d.year}/{d.month:02d}/{d.day:02d}'
 
-    percorso_file_grib = f"{config.get('BOLAM', 'percorso_cartella_grib')}/{sub_cartella_grib}"
-    nome_file_grib = f"bo08_{d.year}{d.month:02d}{d.day:02d}{config.get('COMMON', 'ora_start_forecast')}.grib2"
+    percorso_file_grib = f"{config.get('MOLOCH', 'percorso_cartella_grib')}/{sub_cartella_grib}"
+    nome_file_grib = f"molita15_{d.year}{d.month:02d}{d.day:02d}{config.get('COMMON', 'ora_start_forecast')}.grib2"
 
     if not os.path.exists(f'{percorso_file_grib}/{nome_file_grib}'):
         print(f'!!! File {nome_file_grib} non presente nella cartella {percorso_file_grib}. Continuo')
-        return
-        # continue
+        # return
+        continue
     
     lista_ds = cfgrib.open_datasets(f'{percorso_file_grib}/{nome_file_grib}',
                                     # backend_kwargs={'indexpath': ''})
                                     # backend_kwargs={'indexpath': None})
                                     backend_kwargs={'indexpath': f'/tmp/{nome_file_grib}.idx'})
-    
     # global df_attrs
     df_attrs = f_dataframe_ds_variabili(lista_ds)
     
@@ -208,19 +207,16 @@ def f_estrazione(d):
                              backend_kwargs={'indexpath': ''})
     ds_tp3 = ds_tp3.rename({'unknown': 'tp3'})
     
-    ds_cp3 = xr.open_dataset(f'{percorso_file_grib}/{nome_file_grib}', engine='cfgrib',
-                             filter_by_keys={'discipline': 0, 'parameterNumber': 10, 'parameterCategory': 1},
-                             backend_kwargs={'indexpath': ''})
-    ds_cp3 = ds_cp3.rename({'acpcp': 'cp3'})
-    
     ds_sf3 = xr.open_dataset(f'{percorso_file_grib}/{nome_file_grib}', engine='cfgrib',
                              filter_by_keys={'discipline': 0, 'parameterNumber': 29, 'parameterCategory': 1},
                              backend_kwargs={'indexpath': ''})
     ds_sf3 = ds_sf3.rename({'unknown': 'sf3'})
-
-    lista_ds.append(ds_cp3)
-    df_attrs = df_attrs.rename(index={'acpcp': 'cp3'})
-    df_attrs.loc['cp3', 'id_ds'] = int(df_attrs['id_ds'].max()) + 1
+    
+    ### Il cin non lo carico perché non lo estraggo
+    # ds_cin = xr.open_dataset(f'{percorso_file_grib}/{nome_file_grib}', engine='cfgrib',
+    #                          filter_by_keys={'discipline': 0, 'parameterNumber': 7, 'parameterCategory': 7},
+    #                          backend_kwargs={'indexpath': ''})
+    # ds_cin = ds_sf3.rename({'unknown': 'cin'})
     
     lista_ds.append(ds_tp3)
     df_tp3 = pd.DataFrame('unknown', index=['tp3'], columns=df_attrs.columns)
@@ -242,10 +238,10 @@ def f_estrazione(d):
     df_sf3.loc['sf3', 'GRIB_dataType'] = 'fc'
     df_attrs = pd.concat([df_attrs, df_sf3], axis=0)
     
-    df_attrs = df_attrs.drop('unknown', axis=0) # deve stare in fondo
+    df_attrs = df_attrs.drop('unknown', axis=0)
 
     ### Ciclo sulle variabili
-    for v in ast.literal_eval(config.get('BOLAM', 'variabili_da_estratte')):
+    for v in ast.literal_eval(config.get('MOLOCH', 'variabili_da_estratte')):
         
         if v not in df_attrs.index:
             print(f'!!! Variabile {v} non presente nel file {nome_file_grib}. Continuo')
@@ -261,14 +257,14 @@ def f_estrazione(d):
             t_inizio_v = time.time()
             
             # f_log_ciclo_for([['Data ', d, lista_date_start_forecast],
-            #                   [f'Variabile (indice {i}) ', v, ast.literal_eval(config.get('BOLAM', 'variabili_da_estratte'))]])
-            
+            #                   [f'Variabile (indice {i}) ', v, ast.literal_eval(config.get('MOLOCH', 'variabili_da_estratte'))]])
+
             nome_var = df_sub_attrs.index[0]
             grib_dataType = df_sub_attrs.iloc[i]['GRIB_dataType']
             grib_typeOfLevel = df_sub_attrs.iloc[i]['GRIB_typeOfLevel']
             
             ds = lista_ds[df_sub_attrs.iloc[i]['id_ds']]
-            # sss
+
             inizio_run = pd.to_datetime(ds['time'].values)
             tempi = pd.to_datetime(ds['valid_time'].values) # equivalente (ma più robusto) di "pd.to_datetime([ds['time'].values + x for x in ds['step'].values])"
             lon_2D, lat_2D = ds['longitude'].values, ds['latitude'].values
@@ -300,10 +296,16 @@ def f_estrazione(d):
                 ### Ciclo sui punti
                 for p, lettera, dist in zip(range(int(config.get('COMMON', 'punti_piu_vicini_da_estrarre'))), list(string.ascii_uppercase), distanze_1D):
                     lat_min, lon_min = np.where(distanze_2D == dist)
+                    
+                    # !!! Possono esserci più di un punto con la stessa distanza dalla stazione
+                    if lat_min.shape[0] > 1:
+                        lat_min = lat_min[0]
+                    if lon_min.shape[0] > 1:
+                        lon_min = lon_min[0]
 
                     var_np_ruotata = np.rot90(ds[nome_var].values.T, 1)
                     
-                    ### Per il BOLAM c'è solo 'fc'
+                    ### Per il MOLOCH c'è solo 'fc'
                     if grib_typeOfLevel in ['surface', 'meanSea', 'heightAboveGround'] and len(ds[nome_var].values.shape) == 3:
                         ### (tempi, latitudini, longitudini) -> (latitudini, longitudini, tempi)
                         estrazione = var_np_ruotata[lat_min, lon_min, :].squeeze()
@@ -335,18 +337,18 @@ def f_estrazione(d):
                 
     f_printa_tempo_trascorso(t_inizio_d, time.time(), nota=f'Tempo per d = {d}')
     print()
-    
+    sss
 # # # # # # # #   # # # # # # # #   # # # # # # # #
 # # # # # # # #   # # # # # # # #   # # # # # # # #
 # # # # # # # #   # # # # # # # #   # # # # # # # #
 
 
-if int(config.get('COMMON', 'job_joblib')) == 0:
-    ### Ciclo sulle date
-    for d in lista_date_start_forecast:
-        f_estrazione(d)
+# if int(config.get('COMMON', 'job_joblib')) == 0:
+#     ### Ciclo sulle date
+#     for d in lista_date_start_forecast:
+#         f_estrazione(d)
     
-else:
-    Parallel(n_jobs=int(config.get('COMMON', 'job_joblib')), verbose=1000)(delayed(f_estrazione)(d) for d in lista_date_start_forecast)
+# else:
+#     Parallel(n_jobs=int(config.get('COMMON', 'job_joblib')), verbose=1000)(delayed(f_estrazione)(d) for d in lista_date_start_forecast)
     
 print('\n\nDone')

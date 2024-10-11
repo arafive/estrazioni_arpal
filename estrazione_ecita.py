@@ -191,7 +191,7 @@ def f_estrazione(d):
         return
         
     lista_ds = cfgrib.open_datasets(f'{percorso_file_grib}/{nome_file_grib}',
-                                    indexpath=f'/tmp/{nome_file_grib}.idx')
+                                    backend_kwargs={'indexpath': f'/tmp/{nome_file_grib}.idx'})
     
     global df_attrs
     df_attrs = f_dataframe_ds_variabili(lista_ds)
@@ -287,10 +287,14 @@ def f_estrazione(d):
                     else:
                         raise Exception('Caso non contemplato: ', nome_var, grib_dataType, grib_typeOfLevel, ds[nome_var].values.shape, len(ds[nome_var].values.shape))
                     
-                df_estrazione = df_estrazione.astype(float).applymap(f_round, digits=3)
+                try:
+                    df_estrazione = df_estrazione.astype(float).map(f_round, digits=3)
+                except AttributeError:
+                    df_estrazione = df_estrazione.astype(float).applymap(f_round, digits=3)
+                    
                 df_estrazione.to_csv(f"{cartella_estrazione}/{str(inizio_run).split(' ')[0]}.csv", index=True, header=True, mode='w', na_rep=np.nan)
                 
-            # f_printa_tempo_trascorso(t_inizio_v, time.time(), nota=f'Tempo per variabile {v}')
+            f_printa_tempo_trascorso(t_inizio_v, time.time(), nota=f'Tempo per variabile {v}')
                 
     f_printa_tempo_trascorso(t_inizio_d, time.time(), nota=f'Tempo per d = {d}')
     print()
