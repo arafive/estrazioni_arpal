@@ -196,7 +196,6 @@ def f_estrazione(d):
     global df_attrs
     df_attrs = f_dataframe_ds_variabili(lista_ds)
     
-    sss
     ### Ciclo sulle variabili
     for v in ast.literal_eval(config.get('ECITA', 'variabili_da_estratte')):
         

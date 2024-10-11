@@ -121,8 +121,6 @@ def f_dataframe_ds_variabili(lista_ds):
     
     for i, ds in enumerate(lista_ds):
         for v in [x for x in ds.data_vars]:
-            if v == 'unknown':
-                print(f'!!! Trovata variabile unknown al ds numero {i}') # TODO
             df_attrs = pd.concat([df_attrs, pd.DataFrame({**{'id_ds': i}, **ds[v].attrs}, index=[v])])
             
     ### Elimino le colonne i vuoi valori sono comuni a tutte le righe
@@ -182,8 +180,8 @@ lista_date_start_forecast = pd.date_range(f"{config.get('COMMON', 'data_inizio_e
                                           freq='1D')
 
 
-# def f_estrazione(d):
-for d in lista_date_start_forecast:
+def f_estrazione(d):
+# for d in lista_date_start_forecast:
     t_inizio_d = time.time()
     f_log_ciclo_for([['Data ', d, lista_date_start_forecast]])
     
@@ -194,13 +192,56 @@ for d in lista_date_start_forecast:
 
     if not os.path.exists(f'{percorso_file_grib}/{nome_file_grib}'):
         print(f'!!! File {nome_file_grib} non presente nella cartella {percorso_file_grib}. Continuo')
-        continue #return
+        return
+        # continue
     
     lista_ds = cfgrib.open_datasets(f'{percorso_file_grib}/{nome_file_grib}',
-                                    indexpath=f'/tmp/{nome_file_grib}.idx')
+                                    # backend_kwargs={'indexpath': ''})
+                                    # backend_kwargs={'indexpath': None})
+                                    backend_kwargs={'indexpath': f'/tmp/{nome_file_grib}.idx'})
     
     # global df_attrs
     df_attrs = f_dataframe_ds_variabili(lista_ds)
+    df_attrs = df_attrs.drop('unknown', axis=0)
+    
+    ds_tp3 = xr.open_dataset(f'{percorso_file_grib}/{nome_file_grib}', engine='cfgrib',
+                             filter_by_keys={'discipline': 0, 'parameterNumber': 8, 'parameterCategory': 1},
+                             backend_kwargs={'indexpath': ''})
+    ds_tp3 = ds_tp3.rename({'unknown': 'tp3'})
+    
+    ds_cp3 = xr.open_dataset(f'{percorso_file_grib}/{nome_file_grib}', engine='cfgrib',
+                             filter_by_keys={'discipline': 0, 'parameterNumber': 10, 'parameterCategory': 1},
+                             backend_kwargs={'indexpath': ''})
+    ds_cp3 = ds_cp3.rename({'acpcp': 'cp3'})
+    
+    ds_sf3 = xr.open_dataset(f'{percorso_file_grib}/{nome_file_grib}', engine='cfgrib',
+                             filter_by_keys={'discipline': 0, 'parameterNumber': 29, 'parameterCategory': 1},
+                             backend_kwargs={'indexpath': ''})
+    ds_sf3 = ds_sf3.rename({'unknown': 'sf3'})
+
+    lista_ds.append(ds_cp3)
+    df_attrs = df_attrs.rename(index={'acpcp': 'cp3'})
+    df_attrs.loc['cp3', 'id_ds'] = int(df_attrs['id_ds'].max()) + 1
+    
+    lista_ds.append(ds_tp3)
+    df_tp3 = pd.DataFrame('unknown', index=['tp3'], columns=df_attrs.columns)
+    df_tp3.loc['tp3', 'id_ds'] = int(df_attrs['id_ds'].max()) + 1
+    df_tp3.loc['tp3', 'GRIB_typeOfLevel'] = 'surface'
+    df_tp3.loc['tp3', 'GRIB_stepType'] = 'accum'
+    df_tp3.loc['tp3', 'GRIB_name'] = 'Total precipitation'
+    df_tp3.loc['tp3', 'GRIB_units'] = 'kg m**-2'
+    df_tp3.loc['tp3', 'GRIB_dataType'] = 'fc'
+    df_attrs = pd.concat([df_attrs, df_tp3], axis=0)
+
+    lista_ds.append(ds_sf3)
+    df_sf3 = pd.DataFrame('unknown', index=['sf3'], columns=df_attrs.columns)
+    df_sf3.loc['sf3', 'id_ds'] = int(df_attrs['id_ds'].max()) + 1
+    df_sf3.loc['sf3', 'GRIB_typeOfLevel'] = 'surface'
+    df_sf3.loc['sf3', 'GRIB_stepType'] = 'accum'
+    df_sf3.loc['sf3', 'GRIB_name'] = 'Total snowfall'
+    df_sf3.loc['sf3', 'GRIB_units'] = 'm'
+    df_sf3.loc['sf3', 'GRIB_dataType'] = 'fc'
+    df_attrs = pd.concat([df_attrs, df_sf3], axis=0)
     
     ### Ciclo sulle variabili
     for v in ast.literal_eval(config.get('BOLAM', 'variabili_da_estratte')):
@@ -224,18 +265,9 @@ for d in lista_date_start_forecast:
             nome_var = df_sub_attrs.index[0]
             grib_dataType = df_sub_attrs.iloc[i]['GRIB_dataType']
             grib_typeOfLevel = df_sub_attrs.iloc[i]['GRIB_typeOfLevel']
-
+            
             ds = lista_ds[df_sub_attrs.iloc[i]['id_ds']]
-            
-            ds_tp3 = xr.open_dataset(f'{percorso_file_grib}/{nome_file_grib}', engine='cfgrib', filter_by_keys={'discipline': 0, 'parameterNumber': 8, 'parameterCategory': 1})
-            ds_tp3 = ds_tp3.rename({'unknown': 'tp3'})
-            
-            ds_cp3 = xr.open_dataset(f'{percorso_file_grib}/{nome_file_grib}', engine='cfgrib', filter_by_keys={'discipline': 0, 'parameterNumber': 10, 'parameterCategory': 1})
-            ds_cp3 = ds_cp3.rename({'acpcp': 'cp3'})
-            
-            ds_sf3 = xr.open_dataset(f'{percorso_file_grib}/{nome_file_grib}', engine='cfgrib', filter_by_keys={'discipline': 0, 'parameterNumber': 29, 'parameterCategory': 1})
-            ds_sf3 = ds_sf3.rename({'unknown': 'sf3'})
-            
+            # sss
             inizio_run = pd.to_datetime(ds['time'].values)
             tempi = pd.to_datetime(ds['valid_time'].values) # equivalente (ma più robusto) di "pd.to_datetime([ds['time'].values + x for x in ds['step'].values])"
             lon_2D, lat_2D = ds['longitude'].values, ds['latitude'].values
@@ -260,7 +292,6 @@ for d in lista_date_start_forecast:
                 
                 df_estrazione = pd.DataFrame()
                 
-                sss
                 if os.path.exists(f"{cartella_estrazione}/{str(inizio_run).split(' ')[0]}.csv"):
                     # print(f"{cartella_estrazione}/{str(inizio_run).split(' ')[0]}.csv esiste. Continuo." )
                     continue
@@ -305,12 +336,12 @@ for d in lista_date_start_forecast:
 # # # # # # # #   # # # # # # # #   # # # # # # # #
 
 
-# if int(config.get('COMMON', 'job_joblib')) == 0:
-#     ### Ciclo sulle date
-#     for d in lista_date_start_forecast:
-#         f_estrazione(d)
+if int(config.get('COMMON', 'job_joblib')) == 0:
+    ### Ciclo sulle date
+    for d in lista_date_start_forecast:
+        f_estrazione(d)
     
-# else:
-#     Parallel(n_jobs=int(config.get('COMMON', 'job_joblib')), verbose=1000)(delayed(f_estrazione)(d) for d in lista_date_start_forecast)
+else:
+    Parallel(n_jobs=int(config.get('COMMON', 'job_joblib')), verbose=1000)(delayed(f_estrazione)(d) for d in lista_date_start_forecast)
     
 print('\n\nDone')
