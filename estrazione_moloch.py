@@ -197,8 +197,7 @@ for d in lista_date_start_forecast:
     
     lista_ds = cfgrib.open_datasets(f'{percorso_file_grib}/{nome_file_grib}',
                                     # backend_kwargs={'indexpath': ''})
-                                    # backend_kwargs={'indexpath': None})
-                                    backend_kwargs={'indexpath': f'/tmp/{nome_file_grib}.idx'})
+                                    backend_kwargs={'indexpath': None})
     # global df_attrs
     df_attrs = f_dataframe_ds_variabili(lista_ds)
     
