@@ -8,6 +8,7 @@ import configparser
 
 import numpy as np
 import pandas as pd
+import xarray as xr
 
 from datetime import timedelta
 
@@ -164,6 +165,7 @@ def f_round(a, digits=3):
 
 # %%
 
+
 config = configparser.ConfigParser()
 config.read('./config.ini')
 
@@ -179,9 +181,11 @@ lista_date_start_forecast = pd.date_range(f"{config.get('COMMON', 'data_inizio_e
                                           f"{config.get('COMMON', 'data_fine_estrazione')} {config.get('COMMON', 'ora_start_forecast')}:00:00",
                                           freq='1D')
 
-def f_estrazione(d):
+
+# def f_estrazione(d):
+for d in lista_date_start_forecast:
     t_inizio_d = time.time()
-    # f_log_ciclo_for([['Data ', d, lista_date_start_forecast]])
+    f_log_ciclo_for([['Data ', d, lista_date_start_forecast]])
     
     sub_cartella_grib = f'{d.year}/{d.month:02d}/{d.day:02d}'
 
@@ -190,11 +194,12 @@ def f_estrazione(d):
 
     if not os.path.exists(f'{percorso_file_grib}/{nome_file_grib}'):
         print(f'!!! File {nome_file_grib} non presente nella cartella {percorso_file_grib}. Continuo')
-        return
+        continue #return
     
     lista_ds = cfgrib.open_datasets(f'{percorso_file_grib}/{nome_file_grib}',
                                     indexpath=f'/tmp/{nome_file_grib}.idx')
     
+    # global df_attrs
     df_attrs = f_dataframe_ds_variabili(lista_ds)
     
     ### Ciclo sulle variabili
@@ -222,6 +227,15 @@ def f_estrazione(d):
 
             ds = lista_ds[df_sub_attrs.iloc[i]['id_ds']]
             
+            ds_tp3 = xr.open_dataset(f'{percorso_file_grib}/{nome_file_grib}', engine='cfgrib', filter_by_keys={'discipline': 0, 'parameterNumber': 8, 'parameterCategory': 1})
+            ds_tp3 = ds_tp3.rename({'unknown': 'tp3'})
+            
+            ds_cp3 = xr.open_dataset(f'{percorso_file_grib}/{nome_file_grib}', engine='cfgrib', filter_by_keys={'discipline': 0, 'parameterNumber': 10, 'parameterCategory': 1})
+            ds_cp3 = ds_cp3.rename({'acpcp': 'cp3'})
+            
+            ds_sf3 = xr.open_dataset(f'{percorso_file_grib}/{nome_file_grib}', engine='cfgrib', filter_by_keys={'discipline': 0, 'parameterNumber': 29, 'parameterCategory': 1})
+            ds_sf3 = ds_sf3.rename({'unknown': 'sf3'})
+            
             inizio_run = pd.to_datetime(ds['time'].values)
             tempi = pd.to_datetime(ds['valid_time'].values) # equivalente (ma più robusto) di "pd.to_datetime([ds['time'].values + x for x in ds['step'].values])"
             lon_2D, lat_2D = ds['longitude'].values, ds['latitude'].values
@@ -246,6 +260,7 @@ def f_estrazione(d):
                 
                 df_estrazione = pd.DataFrame()
                 
+                sss
                 if os.path.exists(f"{cartella_estrazione}/{str(inizio_run).split(' ')[0]}.csv"):
                     # print(f"{cartella_estrazione}/{str(inizio_run).split(' ')[0]}.csv esiste. Continuo." )
                     continue
@@ -277,24 +292,25 @@ def f_estrazione(d):
                     else:
                         raise Exception('Caso non contemplato: ', nome_var, grib_dataType, grib_typeOfLevel, ds[nome_var].values.shape, len(ds[nome_var].values.shape))
 
-                df_estrazione = df_estrazione.astype(float).applymap(f_round, digits=3)
+                df_estrazione = df_estrazione.astype(float).map(f_round, digits=3)
                 df_estrazione.to_csv(f"{cartella_estrazione}/{str(inizio_run).split(' ')[0]}.csv", index=True, header=True, mode='w', na_rep=np.nan)
                 
-            # f_printa_tempo_trascorso(t_inizio_v, time.time(), nota=f'Tempo per variabile {v}')
+            f_printa_tempo_trascorso(t_inizio_v, time.time(), nota=f'Tempo per variabile {v}')
                 
     f_printa_tempo_trascorso(t_inizio_d, time.time(), nota=f'Tempo per d = {d}')
     print()
-
-# # # # # # # #   # # # # # # # #   # # # # # # # #
-# # # # # # # #   # # # # # # # #   # # # # # # # #
-# # # # # # # #   # # # # # # # #   # # # # # # # #
-
-if int(config.get('COMMON', 'job_joblib')) == 0:
-    ### Ciclo sulle date
-    for d in lista_date_start_forecast:
-        f_estrazione(d)
     
-else:
-    Parallel(n_jobs=int(config.get('COMMON', 'job_joblib')), verbose=1000)(delayed(f_estrazione)(d) for d in lista_date_start_forecast)
+# # # # # # # #   # # # # # # # #   # # # # # # # #
+# # # # # # # #   # # # # # # # #   # # # # # # # #
+# # # # # # # #   # # # # # # # #   # # # # # # # #
+
+
+# if int(config.get('COMMON', 'job_joblib')) == 0:
+#     ### Ciclo sulle date
+#     for d in lista_date_start_forecast:
+#         f_estrazione(d)
+    
+# else:
+#     Parallel(n_jobs=int(config.get('COMMON', 'job_joblib')), verbose=1000)(delayed(f_estrazione)(d) for d in lista_date_start_forecast)
     
 print('\n\nDone')
