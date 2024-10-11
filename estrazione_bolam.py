@@ -52,26 +52,26 @@ def f_estrazione(d):
         # continue
     
     lista_ds = cfgrib.open_datasets(f'{percorso_file_grib}/{nome_file_grib}',
-                                    # backend_kwargs={'indexpath': ''})
-                                    backend_kwargs={'indexpath': None})
+                                    backend_kwargs={'indexpath': f'/tmp/{nome_file_grib}_lista_ds.idx'})
     
     # global df_attrs
     df_attrs = f_dataframe_ds_variabili(lista_ds)
     
     ds_tp3 = xr.open_dataset(f'{percorso_file_grib}/{nome_file_grib}', engine='cfgrib',
-                             filter_by_keys={'discipline': 0, 'parameterNumber': 8, 'parameterCategory': 1},
-                             backend_kwargs={'indexpath': ''})
+                             filter_by_keys={'discipline': 0, 'parameterCategory': 1, 'parameterNumber': 8},
+                             backend_kwargs={'indexpath': f'/tmp/{nome_file_grib}_tp3.idx'})
     ds_tp3 = ds_tp3.rename({'unknown': 'tp3'})
     
     ds_cp3 = xr.open_dataset(f'{percorso_file_grib}/{nome_file_grib}', engine='cfgrib',
-                             filter_by_keys={'discipline': 0, 'parameterNumber': 10, 'parameterCategory': 1},
-                             backend_kwargs={'indexpath': ''})
+                             filter_by_keys={'discipline': 0, 'parameterCategory': 1, 'parameterNumber': 10},
+                             backend_kwargs={'indexpath': f'/tmp/{nome_file_grib}_cp3.idx'})
     ds_cp3 = ds_cp3.rename({'acpcp': 'cp3'})
     
-    ds_sf3 = xr.open_dataset(f'{percorso_file_grib}/{nome_file_grib}', engine='cfgrib',
-                             filter_by_keys={'discipline': 0, 'parameterNumber': 29, 'parameterCategory': 1},
-                             backend_kwargs={'indexpath': ''})
-    ds_sf3 = ds_sf3.rename({'unknown': 'sf3'})
+    ### La sf3 non la carico perché non la estraggo
+    # ds_sf3 = xr.open_dataset(f'{percorso_file_grib}/{nome_file_grib}', engine='cfgrib',
+    #                          filter_by_keys={'discipline': 0, 'parameterNumber': 29, 'parameterCategory': 1},
+    #                          backend_kwargs={'indexpath': f'/tmp/{nome_file_grib}_sf3.idx'})
+    # ds_sf3 = ds_sf3.rename({'unknown': 'sf3'})
 
     lista_ds.append(ds_cp3)
     df_attrs = df_attrs.rename(index={'acpcp': 'cp3'})
@@ -87,15 +87,15 @@ def f_estrazione(d):
     df_tp3.loc['tp3', 'GRIB_dataType'] = 'fc'
     df_attrs = pd.concat([df_attrs, df_tp3], axis=0)
 
-    lista_ds.append(ds_sf3)
-    df_sf3 = pd.DataFrame('unknown', index=['sf3'], columns=df_attrs.columns)
-    df_sf3.loc['sf3', 'id_ds'] = int(df_attrs['id_ds'].max()) + 1
-    df_sf3.loc['sf3', 'GRIB_typeOfLevel'] = 'surface'
-    df_sf3.loc['sf3', 'GRIB_stepType'] = 'accum'
-    df_sf3.loc['sf3', 'GRIB_name'] = 'Total snowfall'
-    df_sf3.loc['sf3', 'GRIB_units'] = 'm'
-    df_sf3.loc['sf3', 'GRIB_dataType'] = 'fc'
-    df_attrs = pd.concat([df_attrs, df_sf3], axis=0)
+    # lista_ds.append(ds_sf3)
+    # df_sf3 = pd.DataFrame('unknown', index=['sf3'], columns=df_attrs.columns)
+    # df_sf3.loc['sf3', 'id_ds'] = int(df_attrs['id_ds'].max()) + 1
+    # df_sf3.loc['sf3', 'GRIB_typeOfLevel'] = 'surface'
+    # df_sf3.loc['sf3', 'GRIB_stepType'] = 'accum'
+    # df_sf3.loc['sf3', 'GRIB_name'] = 'Total snowfall'
+    # df_sf3.loc['sf3', 'GRIB_units'] = 'm'
+    # df_sf3.loc['sf3', 'GRIB_dataType'] = 'fc'
+    # df_attrs = pd.concat([df_attrs, df_sf3], axis=0)
     
     df_attrs = df_attrs.drop('unknown', axis=0) # deve stare in fondo
 
@@ -123,7 +123,7 @@ def f_estrazione(d):
             grib_typeOfLevel = df_sub_attrs.iloc[i]['GRIB_typeOfLevel']
             
             ds = lista_ds[df_sub_attrs.iloc[i]['id_ds']]
-            # sss
+
             inizio_run = pd.to_datetime(ds['time'].values)
             tempi = pd.to_datetime(ds['valid_time'].values) # equivalente (ma più robusto) di "pd.to_datetime([ds['time'].values + x for x in ds['step'].values])"
             lon_2D, lat_2D = ds['longitude'].values, ds['latitude'].values

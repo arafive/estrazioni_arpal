@@ -36,8 +36,8 @@ lista_date_start_forecast = pd.date_range(f"{config.get('COMMON', 'data_inizio_e
                                           freq='1D')
 
 
-# def f_estrazione(d):
-for d in lista_date_start_forecast:
+def f_estrazione(d):
+# for d in lista_date_start_forecast:
     t_inizio_d = time.time()
     f_log_ciclo_for([['Data ', d, lista_date_start_forecast]])
     
@@ -48,29 +48,30 @@ for d in lista_date_start_forecast:
 
     if not os.path.exists(f'{percorso_file_grib}/{nome_file_grib}'):
         print(f'!!! File {nome_file_grib} non presente nella cartella {percorso_file_grib}. Continuo')
-        # return
-        continue
+        return
+        # continue
     
     lista_ds = cfgrib.open_datasets(f'{percorso_file_grib}/{nome_file_grib}',
-                                    # backend_kwargs={'indexpath': ''})
-                                    backend_kwargs={'indexpath': None})
+                                    backend_kwargs={'indexpath': f'/tmp/{nome_file_grib}_lista_ds.idx'})
+    
     # global df_attrs
     df_attrs = f_dataframe_ds_variabili(lista_ds)
     
     ds_tp3 = xr.open_dataset(f'{percorso_file_grib}/{nome_file_grib}', engine='cfgrib',
-                             filter_by_keys={'discipline': 0, 'parameterNumber': 8, 'parameterCategory': 1},
-                             backend_kwargs={'indexpath': ''})
+                             filter_by_keys={'discipline': 0, 'parameterCategory': 1, 'parameterNumber': 8},
+                             backend_kwargs={'indexpath': f'/tmp/{nome_file_grib}_tp3.idx'})
     ds_tp3 = ds_tp3.rename({'unknown': 'tp3'})
     
-    ds_sf3 = xr.open_dataset(f'{percorso_file_grib}/{nome_file_grib}', engine='cfgrib',
-                             filter_by_keys={'discipline': 0, 'parameterNumber': 29, 'parameterCategory': 1},
-                             backend_kwargs={'indexpath': ''})
-    ds_sf3 = ds_sf3.rename({'unknown': 'sf3'})
+    ### La sf3 non la carico perché non la estraggo
+    # ds_sf3 = xr.open_dataset(f'{percorso_file_grib}/{nome_file_grib}', engine='cfgrib',
+    #                          filter_by_keys={'discipline': 0, 'parameterCategory': 1, 'parameterNumber': 29},
+    #                          backend_kwargs={'indexpath': f'/tmp/{nome_file_grib}_sf3.idx'})
+    # ds_sf3 = ds_sf3.rename({'unknown': 'sf3'})
     
     ### Il cin non lo carico perché non lo estraggo
     # ds_cin = xr.open_dataset(f'{percorso_file_grib}/{nome_file_grib}', engine='cfgrib',
     #                          filter_by_keys={'discipline': 0, 'parameterNumber': 7, 'parameterCategory': 7},
-    #                          backend_kwargs={'indexpath': ''})
+    #                          backend_kwargs={'indexpath': f'/tmp/{nome_file_grib}_cin.idx'})
     # ds_cin = ds_sf3.rename({'unknown': 'cin'})
     
     lista_ds.append(ds_tp3)
@@ -83,17 +84,19 @@ for d in lista_date_start_forecast:
     df_tp3.loc['tp3', 'GRIB_dataType'] = 'fc'
     df_attrs = pd.concat([df_attrs, df_tp3], axis=0)
 
-    lista_ds.append(ds_sf3)
-    df_sf3 = pd.DataFrame('unknown', index=['sf3'], columns=df_attrs.columns)
-    df_sf3.loc['sf3', 'id_ds'] = int(df_attrs['id_ds'].max()) + 1
-    df_sf3.loc['sf3', 'GRIB_typeOfLevel'] = 'surface'
-    df_sf3.loc['sf3', 'GRIB_stepType'] = 'accum'
-    df_sf3.loc['sf3', 'GRIB_name'] = 'Total snowfall'
-    df_sf3.loc['sf3', 'GRIB_units'] = 'm'
-    df_sf3.loc['sf3', 'GRIB_dataType'] = 'fc'
-    df_attrs = pd.concat([df_attrs, df_sf3], axis=0)
+    # lista_ds.append(ds_sf3)
+    # df_sf3 = pd.DataFrame('unknown', index=['sf3'], columns=df_attrs.columns)
+    # df_sf3.loc['sf3', 'id_ds'] = int(df_attrs['id_ds'].max()) + 1
+    # df_sf3.loc['sf3', 'GRIB_typeOfLevel'] = 'surface'
+    # df_sf3.loc['sf3', 'GRIB_stepType'] = 'accum'
+    # df_sf3.loc['sf3', 'GRIB_name'] = 'Total snowfall'
+    # df_sf3.loc['sf3', 'GRIB_units'] = 'm'
+    # df_sf3.loc['sf3', 'GRIB_dataType'] = 'fc'
+    # df_attrs = pd.concat([df_attrs, df_sf3], axis=0)
     
-    df_attrs = df_attrs.drop('unknown', axis=0)
+    ### Non ho scritto df_cin
+    
+    df_attrs = df_attrs.drop('unknown', axis=0) # deve stare in fondo
 
     ### Ciclo sulle variabili
     for v in ast.literal_eval(config.get('MOLOCH', 'variabili_da_estratte')):
@@ -192,18 +195,18 @@ for d in lista_date_start_forecast:
                 
     f_printa_tempo_trascorso(t_inizio_d, time.time(), nota=f'Tempo per d = {d}')
     print()
-    sss
+
 # # # # # # # #   # # # # # # # #   # # # # # # # #
 # # # # # # # #   # # # # # # # #   # # # # # # # #
 # # # # # # # #   # # # # # # # #   # # # # # # # #
 
 
-# if int(config.get('COMMON', 'job_joblib')) == 0:
-#     ### Ciclo sulle date
-#     for d in lista_date_start_forecast:
-#         f_estrazione(d)
+if int(config.get('COMMON', 'job_joblib')) == 0:
+    ### Ciclo sulle date
+    for d in lista_date_start_forecast:
+        f_estrazione(d)
     
-# else:
-#     Parallel(n_jobs=int(config.get('COMMON', 'job_joblib')), verbose=1000)(delayed(f_estrazione)(d) for d in lista_date_start_forecast)
+else:
+    Parallel(n_jobs=int(config.get('COMMON', 'job_joblib')), verbose=1000)(delayed(f_estrazione)(d) for d in lista_date_start_forecast)
     
 print('\n\nDone')
