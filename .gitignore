@@ -1,4 +1,5 @@
 venv*/
+test/
 __pycache__/
 analisi_esplorativa_modelli_t2m.py
 *.log
