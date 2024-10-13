@@ -35,8 +35,9 @@ lista_date_start_forecast = pd.date_range(f"{config.get('COMMON', 'data_inizio_e
                                           freq='1D')
 
 def f_estrazione(d):
+# for d in lista_date_start_forecast:
     t_inizio_d = time.time()
-    # f_log_ciclo_for([['Data ', d, lista_date_start_forecast]])
+    f_log_ciclo_for([['Data ', d, lista_date_start_forecast]])
     
     sub_cartella_grib = f'{d.year}/{d.month:02d}/{d.day:02d}'
 
@@ -46,6 +47,7 @@ def f_estrazione(d):
     if not os.path.exists(f'{percorso_file_grib}/{nome_file_grib}'):
         print(f'!!! File {nome_file_grib} non presente nella cartella {percorso_file_grib}. Continuo')
         return
+        # continue
         
     lista_ds = cfgrib.open_datasets(f'{percorso_file_grib}/{nome_file_grib}',
                                     backend_kwargs={'indexpath': f'/tmp/{nome_file_grib}_lista_ds.idx'})
@@ -151,7 +153,7 @@ def f_estrazione(d):
                     
                 df_estrazione.to_csv(f"{cartella_estrazione}/{str(inizio_run).split(' ')[0]}.csv", index=True, header=True, mode='w', na_rep=np.nan)
                 
-            f_printa_tempo_trascorso(t_inizio_v, time.time(), nota=f'Tempo per variabile {v}')
+            f_printa_tempo_trascorso(t_inizio_v, time.time(), nota=f'Tempo per variabile {v} (indice {i})')
                 
     f_printa_tempo_trascorso(t_inizio_d, time.time(), nota=f'Tempo per d = {d}')
     print()
@@ -159,6 +161,7 @@ def f_estrazione(d):
 # # # # # # # #   # # # # # # # #   # # # # # # # #
 # # # # # # # #   # # # # # # # #   # # # # # # # #
 # # # # # # # #   # # # # # # # #   # # # # # # # #
+
 
 if int(config.get('COMMON', 'job_joblib')) == 0:
     ### Ciclo sulle date

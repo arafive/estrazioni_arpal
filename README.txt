@@ -13,4 +13,6 @@ hanno sia l'analisi (an) che la previsione (fc).
 
 # TODO Per ora la mia funzione di arrotondamento fa il round solo se il numero non è 0.qualcosa;
 
+# TODO Aggiungi il salvataggio degli interi campi di precipitazione, vento e temperatura
+
 # TODO Fare un salvataggio più intelligente e razionale degli output (pkl ?)
