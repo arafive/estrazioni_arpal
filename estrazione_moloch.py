@@ -100,6 +100,7 @@ def f_estrazione(d):
 
     ### Ciclo sulle variabili
     for v in ast.literal_eval(config.get('MOLOCH', 'variabili_da_estratte')):
+        t_inizio_v = time.time()
         
         if v not in df_attrs.index:
             print(f'!!! Variabile {v} non presente nel file {nome_file_grib}. Continuo')
@@ -112,7 +113,6 @@ def f_estrazione(d):
 
         ### Ciclo sulla posizione degli indici
         for i in range(df_sub_attrs.shape[0]):
-            t_inizio_v = time.time()
             
             # f_log_ciclo_for([['Data ', d, lista_date_start_forecast],
             #                   [f'Variabile (indice {i}) ', v, ast.literal_eval(config.get('MOLOCH', 'variabili_da_estratte'))]])
