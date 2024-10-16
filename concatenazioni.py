@@ -109,7 +109,11 @@ for v in lista_variabili:
 
                 df_s = pd.concat([df_s, df], axis=0)
 
-            df_v = pd.concat([df_v, df_s], axis=1)
+            try:
+                df_v = pd.concat([df_v, df_s], axis=1)
+            except pd.errors.InvalidIndexError:
+                ### Problemi con ECMWF/00/cape/fc/surface/TESTI/2023-12-31.csv
+                continue
 
     lista_completa_datetime = pd.date_range(lista_datetime[0], lista_datetime[-1] + pd.DateOffset(hours=24), freq=freq)
 
