@@ -89,7 +89,7 @@ def f_estrazione(d):
             else:
                 livelli = ds[grib_typeOfLevel].values
                 
-                # TODO -> livelli = [int(x) for x in livelli]
+            livelli = [int(x) for x in livelli]
 
             ### Ciclo sulle stazioni
             for s in df_file_coordinate.index:

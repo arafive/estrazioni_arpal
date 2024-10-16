@@ -44,6 +44,8 @@ cartella_tmp = f_crea_cartella(f'{cartella_output_concatenazioni}/tmp', print_me
 lista_variabili = sorted(os.listdir(f'{cartella_madre_estrazione}/{ora_start_forecast}'))
 
 for v in lista_variabili:
+    print(v)
+    
     df_v = pd.DataFrame()
 
     # lista_cartelle_an_fc = sorted(os.listdir(f'{cartella_madre_estrazione}/{ora_start_forecast}/{v}'))
@@ -73,7 +75,7 @@ for v in lista_variabili:
             lista_datetime = pd.to_datetime([x.split('.')[0] for x in lista_file_tempi])
 
             for t, d in zip(lista_file_tempi, lista_datetime):
-                print(v, f, l, s, str(t))
+                # print(v, f, l, s, str(t))
 
                 cartella_df = f'{cartella_madre_estrazione}/{ora_start_forecast}/{v}/{f}/{l}/{s}'
 
@@ -97,9 +99,10 @@ for v in lista_variabili:
                     df.columns = [x.split('.')[0] for x in df.columns]
                     df.columns = [f"{x.split('_')[1]}_{x.split('_')[0]}" for x in df.columns]
 
+                freq = '1h' if dict_config_modelli[config.get('CONCATENAZIONI', 'modello')] == 'MOLOCHsfc' else '3h'
                 df = df.loc[df.index.intersection(pd.date_range(d + pd.DateOffset(hours=int(range_previsionale.split('-')[0])),
                                                                 d + pd.DateOffset(hours=int(range_previsionale.split('-')[1])),
-                                                                freq='3h'))]
+                                                                freq=freq))]
 
                 v_nome = v_nome.replace('_', '')  # Nel caso di 'cape_con' -> 'capecon'
                 df.columns = [f'{v_nome}_{x}_{s}' for x in df.columns]
@@ -108,7 +111,7 @@ for v in lista_variabili:
 
             df_v = pd.concat([df_v, df_s], axis=1)
 
-    lista_completa_datetime = pd.date_range(lista_datetime[0], lista_datetime[-1] + pd.DateOffset(hours=24), freq='3h')
+    lista_completa_datetime = pd.date_range(lista_datetime[0], lista_datetime[-1] + pd.DateOffset(hours=24), freq=freq)
 
     ### Per non rischiare di generare un mostro di .csv, devo salvare a pezzetti.
 
@@ -122,7 +125,7 @@ for v in lista_variabili:
 
     df_v.to_csv(f"{cartella_tmp}/df_{v}_{range_previsionale}_{dict_config_modelli[config.get('CONCATENAZIONI', 'modello')]}_{config.get('CONCATENAZIONI', 'regione')}.csv", index=True, header=True, mode='w', na_rep=np.nan)
 
-    f_printa_tempo_trascorso(t_inizio_s, time.time(), nota=f'Tempo per variabile {v})')
+    f_printa_tempo_trascorso(t_inizio_s, time.time(), nota=f'Tempo per variabile {v}')
 
 del (df, df_v, df_s, v, f, l, s, d, t, v_nome)
 
@@ -154,7 +157,7 @@ for s in lista_stazioni:
     ##### Modulo e direzione del vento
     #####
 
-    lista_colonne_u = [x for x in df_s.columns if x.startswith('u_') or x.startswith('u-')]
+    lista_colonne_u = [x for x in df_s.columns if x.startswith('u_') or x.startswith('u2PVU_')]
 
     for col_u in lista_colonne_u:
         col_v = f'v{col_u[1:]}'
