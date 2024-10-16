@@ -8,6 +8,8 @@ import pandas as pd
 
 from metpy.units import units
 from metpy.calc import relative_humidity_from_mixing_ratio
+from metpy.calc import relative_humidity_from_dewpoint
+from metpy.calc import dewpoint_from_relative_humidity
 from metpy.calc import potential_temperature
 from metpy.calc import wind_direction
 from metpy.calc import virtual_temperature
@@ -58,8 +60,8 @@ for v in lista_variabili:
 
         lista_stazioni = sorted(os.listdir(f'{cartella_madre_estrazione}/{ora_start_forecast}/{v}/{f}/{l}'))
 
-        # for s in lista_stazioni:
-        for s in lista_stazioni[0:3]:
+        for s in lista_stazioni:
+        # for s in lista_stazioni[0:3]:
             t_inizio_s = time.time()
             f_log_ciclo_for([['Variabile ', v, lista_variabili],
                              ['Stazione ', s, lista_stazioni]])
@@ -67,7 +69,7 @@ for v in lista_variabili:
             df_s = pd.DataFrame()
 
             lista_file_tempi = sorted(os.listdir(f'{cartella_madre_estrazione}/{ora_start_forecast}/{v}/{f}/{l}/{s}'))
-            lista_file_tempi = lista_file_tempi[0:5]
+            # lista_file_tempi = lista_file_tempi[0:5]
             lista_datetime = pd.to_datetime([x.split('.')[0] for x in lista_file_tempi])
 
             for t, d in zip(lista_file_tempi, lista_datetime):
@@ -128,8 +130,8 @@ del (df, df_v, df_s, v, f, l, s, d, t, v_nome)
 
 print('\nCreazione dei dataset delle singole stazioni\n')
 
-# for s in lista_stazioni:
-for s in lista_stazioni[0:3]:
+for s in lista_stazioni:
+# for s in lista_stazioni[0:3]:
     f_log_ciclo_for([['Stazione ', s, lista_stazioni]])
 
     df_s = pd.DataFrame()
@@ -179,7 +181,7 @@ for s in lista_stazioni[0:3]:
     
     #####
     ##### Umidità relativa
-    ##### TODO aggiungi anche la rh2m
+    #####
 
     lista_colonne_q = [x for x in df_s.columns if x.startswith('q_') or x.startswith('qv_')]
     lista_colonne_t = [x for x in df_s.columns if x.startswith('t_')]
@@ -192,7 +194,27 @@ for s in lista_stazioni[0:3]:
         df_rh = pd.DataFrame(rh, columns=[f'rh{col_t[1:]}'], index=df_s.index)
 
         df_s = pd.concat([df_s, df_rh], axis=1)
+        
+    if dict_config_modelli[config.get('CONCATENAZIONI', 'modello')] == 'ECMWF':
+        lista_colonne_t2m = [x for x in df_s.columns if x.startswith('t2m_')]
+        lista_colonne_d2m = [x for x in df_s.columns if x.startswith('d2m_')]
 
+        for col_t2m, col_d2m in zip(lista_colonne_t2m, lista_colonne_d2m):
+            rh2m = np.array(relative_humidity_from_dewpoint(df_s[col_t2m].values * units.K, df_s[col_d2m].values).to('percent'))
+            df_rh2m = pd.DataFrame(rh2m, columns=[col_t2m.replace('t2m', 'rh2m')], index=df_s.index)
+    
+            df_s = pd.concat([df_s, df_rh2m], axis=1)
+            
+    if dict_config_modelli[config.get('CONCATENAZIONI', 'modello')] in ['BOLAM', 'MOLOCH']:
+        lista_colonne_t2m = [x for x in df_s.columns if x.startswith('t2m_')]
+        lista_colonne_rh2m = [x for x in df_s.columns if x.startswith('rh2m_')]
+        
+        for col_t2m, col_rh2m in zip(lista_colonne_t2m, lista_colonne_rh2m):
+            d2m = np.array(dewpoint_from_relative_humidity(df_s[col_t2m].values * units.K, df_s[col_rh2m].values * units.percent))
+            df_d2m = pd.DataFrame(d2m, columns=[col_t2m.replace('t2m', 'd2m')], index=df_s.index)
+        
+            df_s = pd.concat([df_s, df_rh2m], axis=1)
+        
     #####
     ##### Temperatura potenziale
     #####
@@ -240,8 +262,8 @@ for s in lista_stazioni[0:3]:
 
     df_s = df_s.dropna()
 
-    # df_s.to_csv(f"{cartella_output_concatenazioni}/df_{range_previsionale}_{s}_{dict_config_modelli[config.get('CONCATENAZIONI', 'modello')]}_{config.get('CONCATENAZIONI', 'regione')}.csv", index=True, header=True, mode='w', na_rep=np.nan)
+    df_s.to_csv(f"{cartella_output_concatenazioni}/df_{range_previsionale}_{s}_{dict_config_modelli[config.get('CONCATENAZIONI', 'modello')]}_{config.get('CONCATENAZIONI', 'regione')}.csv", index=True, header=True, mode='w', na_rep=np.nan)
 
-# os.system(f'rm -rf {cartella_tmp}')
+os.system(f'rm -rf {cartella_tmp}')
 
 print('\n\nDone.')
