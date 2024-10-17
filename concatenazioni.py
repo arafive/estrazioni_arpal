@@ -14,6 +14,9 @@ from metpy.calc import potential_temperature
 from metpy.calc import wind_direction
 from metpy.calc import virtual_temperature
 
+from joblib import delayed
+from joblib import Parallel
+
 from funzioni import f_log_ciclo_for
 from funzioni import f_crea_cartella
 from funzioni import f_printa_tempo_trascorso
@@ -43,7 +46,8 @@ cartella_tmp = f_crea_cartella(f'{cartella_output_concatenazioni}/tmp', print_me
 
 lista_variabili = sorted(os.listdir(f'{cartella_madre_estrazione}/{ora_start_forecast}'))
 
-for v in lista_variabili:
+def f_concatenazione(v):
+# for v in lista_variabili:
     print(v)
     
     df_v = pd.DataFrame()
@@ -60,6 +64,7 @@ for v in lista_variabili:
         else:
             v_nome = v
 
+        global lista_stazioni
         lista_stazioni = sorted(os.listdir(f'{cartella_madre_estrazione}/{ora_start_forecast}/{v}/{f}/{l}'))
 
         for s in lista_stazioni:
@@ -130,9 +135,21 @@ for v in lista_variabili:
     df_v.to_csv(f"{cartella_tmp}/df_{v}_{range_previsionale}_{dict_config_modelli[config.get('CONCATENAZIONI', 'modello')]}_{config.get('CONCATENAZIONI', 'regione')}.csv", index=True, header=True, mode='w', na_rep=np.nan)
 
     f_printa_tempo_trascorso(t_inizio_s, time.time(), nota=f'Tempo per variabile {v}')
+    print()
 
-del (df, df_v, df_s, v, f, l, s, d, t, v_nome)
+# # # # # # # #   # # # # # # # #   # # # # # # # #
+# # # # # # # #   # # # # # # # #   # # # # # # # #
+# # # # # # # #   # # # # # # # #   # # # # # # # #
 
+
+if int(config.get('CONCATENAZIONI', 'job_joblib')) == 0:
+    ### Ciclo sulle variabili
+    for v in lista_variabili:
+        f_concatenazione(v)
+    
+else:
+    Parallel(n_jobs=int(config.get('CONCATENAZIONI', 'job_joblib')), verbose=1000)(delayed(f_concatenazione)(v) for v in lista_variabili)
+    
 # %%
 
 print('\nCreazione dei dataset delle singole stazioni\n')
