@@ -266,28 +266,40 @@ for s in lista_stazioni:
     ##### Seni e coseni di ora e mese
     #####
 
-    ora  = df_s.index.hour
-    mese = df_s.index.month
-    df_cosh = pd.DataFrame(np.cos(2 * np.pi * ora / 23.0), index=df_s.index, columns=['cosh'])
-    df_sinh = pd.DataFrame(np.sin(2 * np.pi * ora / 23.0), index=df_s.index, columns=['sinh'])
-    df_cosm = pd.DataFrame(np.cos(2 * np.pi * mese / 12.0), index=df_s.index, columns=['cosm'])
-    df_sinm = pd.DataFrame(np.sin(2 * np.pi * mese / 12.0), index=df_s.index, columns=['sinm'])
-
-    df_s = pd.concat([df_s, df_cosh, df_sinh, df_cosm, df_sinm], axis=1)
+    if not dict_config_modelli[config.get('CONCATENAZIONI', 'modello')] == 'MOLOCHsfc':
+        ora  = df_s.index.hour
+        mese = df_s.index.month
+        df_cosh = pd.DataFrame(np.cos(2 * np.pi * ora / 23.0), index=df_s.index, columns=['cosh'])
+        df_sinh = pd.DataFrame(np.sin(2 * np.pi * ora / 23.0), index=df_s.index, columns=['sinh'])
+        df_cosm = pd.DataFrame(np.cos(2 * np.pi * mese / 12.0), index=df_s.index, columns=['cosm'])
+        df_sinm = pd.DataFrame(np.sin(2 * np.pi * mese / 12.0), index=df_s.index, columns=['sinm'])
+    
+        df_s = pd.concat([df_s, df_cosh, df_sinh, df_cosm, df_sinm], axis=1)
 
     #####
     ##### Dati osservati
     #####
 
-    for cartella in ['direzione', 'modulo', 'precipitazione', 'temperatura']:
-        if os.path.exists(f'{cartella_dati_osservati}/{s}.csv'):
-            df_obs = pd.read_csv(f'{cartella_dati_osservati}/{s}.csv', index_col=0, parse_dates=True)
-            df_s = pd.concat([df_s, df_obs], axis=1)
+    # # TODO fai dei test -> hi riflettuto ed è meglio averli a parte
+    # for cartella in ['direzione', 'modulo', 'precipitazione', 'temperatura']:
+
+    #     if not cartella == 'precipitazione':
+
+    #         if os.path.exists(f'{cartella_dati_osservati}/{cartella}/{s}.csv'):
+    #             df_obs = pd.read_csv(f'{cartella_dati_osservati}/{cartella}/{s}.csv', index_col=0, parse_dates=True)
+    #             df_s = pd.concat([df_s, df_obs], axis=1)
+            
+    #     else:
+    #         for i in ['1H', '3H', '6H', '12H', '24H']:
+
+    #             if os.path.exists(f'{cartella_dati_osservati}/{cartella}/{i}/{s}.csv'):
+    #                 df_obs = pd.read_csv(f'{cartella_dati_osservati}/{cartella}/{i}/{s}.csv', index_col=0, parse_dates=True)
+    #                 df_s = pd.concat([df_s, df_obs], axis=1)
 
     df_s = df_s.dropna()
 
     df_s.to_csv(f"{cartella_output_concatenazioni}/df_{range_previsionale}_{s}_{dict_config_modelli[config.get('CONCATENAZIONI', 'modello')]}_{config.get('CONCATENAZIONI', 'regione')}.csv", index=True, header=True, mode='w', na_rep=np.nan)
 
-os.system(f'rm -rf {cartella_tmp}')
+# os.system(f'rm -rf {cartella_tmp}')
 
 print('\n\nDone.')
