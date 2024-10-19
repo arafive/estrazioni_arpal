@@ -70,7 +70,6 @@ def f_concatenazione(v):
         lista_stazioni = sorted(os.listdir(f'{cartella_madre_estrazione}/{ora_start_forecast}/{v}/{f}/{l}'))
 
         for s in lista_stazioni:
-        # for s in lista_stazioni[0:1]:
             t_inizio_s = time.time()
             f_log_ciclo_for([['Variabile ', v, lista_variabili],
                              ['Stazione ', s, lista_stazioni]])
@@ -81,7 +80,7 @@ def f_concatenazione(v):
             lista_datetime = pd.to_datetime([x.split('.')[0] for x in lista_file_tempi])
 
             for t, d in zip(lista_file_tempi, lista_datetime):
-                print(v, f, l, s, t)
+                # print(v, f, l, s, t)
                 cartella_df = f'{cartella_madre_estrazione}/{ora_start_forecast}/{v}/{f}/{l}/{s}'
 
                 try:
@@ -174,7 +173,6 @@ else:
 print('\nCreazione dei dataset delle singole stazioni\n')
 
 for s in lista_stazioni:
-# for s in lista_stazioni[0:1]:
     f_log_ciclo_for([['Stazione ', s, lista_stazioni]])
 
     df_s = pd.DataFrame()
