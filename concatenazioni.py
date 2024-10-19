@@ -1,6 +1,7 @@
 
 import os
 import time
+import string
 import configparser
 
 import numpy as np
@@ -27,6 +28,7 @@ config.read('./config.ini')
 
 dict_config_modelli = {
     'ECITA': 'ECMWF',
+    'ECMWF': 'ECMWF',
     'BOLAM': 'BOLAM',
     'MOLOCH': 'MOLOCH',
     'MOLOCHsfc': 'MOLOCHsfc',
@@ -34,6 +36,7 @@ dict_config_modelli = {
 
 cartella_madre_estrazione = f"{config.get('COMMON', 'cartella_madre_estrazione')}/{dict_config_modelli[config.get('CONCATENAZIONI', 'modello')]}"
 ora_start_forecast = f"{config.get('COMMON', 'ora_start_forecast')}"
+punti_piu_vicini_da_estrarre = int(f"{config.get('COMMON', 'punti_piu_vicini_da_estrarre')}")
 
 cartella_dati_osservati = f"{config.get('CONCATENAZIONI', 'cartella_dati_osservati')}"
 cartella_madre_output_concatenazioni = f"{config.get('CONCATENAZIONI', 'cartella_madre_output_concatenazioni')}"
@@ -44,12 +47,10 @@ cartella_tmp = f_crea_cartella(f'{cartella_output_concatenazioni}/tmp', print_me
 
 # %%
 
-lista_variabili = sorted(os.listdir(f'{cartella_madre_estrazione}/{ora_start_forecast}'))
+lista_variabili = sorted([x for x in os.listdir(f'{cartella_madre_estrazione}/{ora_start_forecast}') if not x.endswith('.txt')])
 
 def f_concatenazione(v):
 # for v in lista_variabili:
-    print(v)
-    
     df_v = pd.DataFrame()
 
     # lista_cartelle_an_fc = sorted(os.listdir(f'{cartella_madre_estrazione}/{ora_start_forecast}/{v}'))
@@ -68,7 +69,7 @@ def f_concatenazione(v):
         lista_stazioni = sorted(os.listdir(f'{cartella_madre_estrazione}/{ora_start_forecast}/{v}/{f}/{l}'))
 
         for s in lista_stazioni:
-        # for s in lista_stazioni[0:3]:
+        # for s in lista_stazioni[0:1]:
             t_inizio_s = time.time()
             f_log_ciclo_for([['Variabile ', v, lista_variabili],
                              ['Stazione ', s, lista_stazioni]])
@@ -76,12 +77,9 @@ def f_concatenazione(v):
             df_s = pd.DataFrame()
 
             lista_file_tempi = sorted(os.listdir(f'{cartella_madre_estrazione}/{ora_start_forecast}/{v}/{f}/{l}/{s}'))
-            # lista_file_tempi = lista_file_tempi[0:5]
             lista_datetime = pd.to_datetime([x.split('.')[0] for x in lista_file_tempi])
 
             for t, d in zip(lista_file_tempi, lista_datetime):
-                # print(v, f, l, s, str(t))
-
                 cartella_df = f'{cartella_madre_estrazione}/{ora_start_forecast}/{v}/{f}/{l}/{s}'
 
                 try:
@@ -89,7 +87,25 @@ def f_concatenazione(v):
                 except pd.errors.EmptyDataError:
                     ### ECMWF/00/cape/fc/surface/TESTI/2021-02-03.csv erano vuoti, non so perchè
                     continue
+                
+                if '.' in df.columns[0]:
+                    ### Colpa mia, solo nell'ecita
+                    df.columns = [x.split('.')[0] for x in df.columns]
+                    df.columns = [f"{x.split('_')[1]}_{x.split('_')[0]}" for x in df.columns]
+                    
+                if len(df.columns[0].split('_')) == 2 and dict_config_modelli[config.get('CONCATENAZIONI', 'modello')] == 'ECMWF':
+                    ### Ecita non ha sempre avuto un numero costante di livelli in pressione.
+                    ### Devo tenere solo quelli sempre presenti.
+                    ### I venti tipo u10 non vengono tolti.
 
+                    livelli_hPa_da_togliere = [10] + list(np.arange(25, 325, 25))
+                    for livello_da_togliere in livelli_hPa_da_togliere:
+                        if livelli_hPa_da_togliere == 100:
+                            ### Altrimenti mi toglie anche 1000
+                            df = df.drop(columns=[f'100_{x}' for x in list(string.ascii_uppercase)[:punti_piu_vicini_da_estrarre]])
+                        else:
+                            df = df.drop(columns=[x for x in df.columns if f'{livello_da_togliere}_' in x])
+                
                 if dict_config_modelli[config.get('CONCATENAZIONI', 'modello')] == 'ECMWF' and v in ['tp', 'cp']:
                     ### Ecita: non ha la tp3 ma una precipitazione cumualta dallo start fino alla fine
                     df_shift = df.shift(periods=1, fill_value=0) # periods=1 per la tp3, nota bene che oltre +96 diventa ogni 6 ore
@@ -98,11 +114,6 @@ def f_concatenazione(v):
                 if df.index[0].hour == 0:
                     ### Ecita: dal 2023-01-14 l'analisi e il forecast non sono più separati. Devo togliere la prima riga
                     df = df.drop(df.index[0], axis=0)
-
-                if '.' in df.columns[0]:
-                    ### Colpa mia, solo nell'ecita
-                    df.columns = [x.split('.')[0] for x in df.columns]
-                    df.columns = [f"{x.split('_')[1]}_{x.split('_')[0]}" for x in df.columns]
 
                 freq = '1h' if dict_config_modelli[config.get('CONCATENAZIONI', 'modello')] == 'MOLOCHsfc' else '3h'
                 df = df.loc[df.index.intersection(pd.date_range(d + pd.DateOffset(hours=int(range_previsionale.split('-')[0])),
@@ -149,13 +160,13 @@ if int(config.get('CONCATENAZIONI', 'job_joblib')) == 0:
     
 else:
     Parallel(n_jobs=int(config.get('CONCATENAZIONI', 'job_joblib')), verbose=1000)(delayed(f_concatenazione)(v) for v in lista_variabili)
-    
+
 # %%
 
 print('\nCreazione dei dataset delle singole stazioni\n')
 
 for s in lista_stazioni:
-# for s in lista_stazioni[0:3]:
+# for s in lista_stazioni[0:1]:
     f_log_ciclo_for([['Stazione ', s, lista_stazioni]])
 
     df_s = pd.DataFrame()
@@ -168,11 +179,21 @@ for s in lista_stazioni:
     #####
     ##### La precipitazione di ECMWF ha bisogno di postprocessing per diventare tp3
     ##### ---> non posso farlo qui, devo farlo dentro il primo ciclo -> FATTO
-
+    
     if dict_config_modelli[config.get('CONCATENAZIONI', 'modello')] == 'ECMWF':
         ### da m a mm
         df_s[[x for x in df_s if x.startswith('tp_')]] = df_s[[x for x in df_s if x.startswith('tp_')]] * 1000
         df_s[[x for x in df_s if x.startswith('cp_')]] = df_s[[x for x in df_s if x.startswith('cp_')]] * 1000
+
+    #####
+    ##### Copertura nuvolosa
+    #####
+    
+    if dict_config_modelli[config.get('CONCATENAZIONI', 'modello')] == 'ECMWF':
+
+        for nuvola in ['tcc', 'hcc', 'mcc', 'lcc']:
+            lista_colonne_nuvole = [x for x in df_s.columns if x.startswith(nuvola)]
+            df_s[lista_colonne_nuvole] = (df_s[lista_colonne_nuvole] * 100).round(3) # Da (0-1) a %
 
     #####
     ##### Modulo e direzione del vento
@@ -224,7 +245,7 @@ for s in lista_stazioni:
         lista_colonne_d2m = [x for x in df_s.columns if x.startswith('d2m_')]
 
         for col_t2m, col_d2m in zip(lista_colonne_t2m, lista_colonne_d2m):
-            rh2m = np.array(relative_humidity_from_dewpoint(df_s[col_t2m].values * units.K, df_s[col_d2m].values).to('percent'))
+            rh2m = np.array(relative_humidity_from_dewpoint(df_s[col_t2m].values * units.K, df_s[col_d2m].values * units.K).to('percent'))
             df_rh2m = pd.DataFrame(rh2m, columns=[col_t2m.replace('t2m', 'rh2m')], index=df_s.index)
     
             df_s = pd.concat([df_s, df_rh2m], axis=1)
@@ -280,7 +301,7 @@ for s in lista_stazioni:
     ##### Dati osservati
     #####
 
-    # # TODO fai dei test -> hi riflettuto ed è meglio averli a parte
+    ### Ho riflettuto ed è meglio avere gli osservati a parte
     # for cartella in ['direzione', 'modulo', 'precipitazione', 'temperatura']:
 
     #     if not cartella == 'precipitazione':
