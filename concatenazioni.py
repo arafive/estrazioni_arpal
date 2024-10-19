@@ -153,13 +153,13 @@ def f_concatenazione(v):
 # # # # # # # #   # # # # # # # #   # # # # # # # #
 
 
-if int(config.get('CONCATENAZIONI', 'job_joblib')) == 0:
+if int(config.get('CONCATENAZIONI', 'job')) == 0:
     ### Ciclo sulle variabili
     for v in lista_variabili:
         f_concatenazione(v)
     
 else:
-    Parallel(n_jobs=int(config.get('CONCATENAZIONI', 'job_joblib')), verbose=1000)(delayed(f_concatenazione)(v) for v in lista_variabili)
+    Parallel(n_jobs=int(config.get('CONCATENAZIONI', 'job')), verbose=1000)(delayed(f_concatenazione)(v) for v in lista_variabili)
 
 # %%
 

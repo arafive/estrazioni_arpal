@@ -163,12 +163,12 @@ def f_estrazione(d):
 # # # # # # # #   # # # # # # # #   # # # # # # # #
 
 
-if int(config.get('COMMON', 'job_joblib')) == 0:
+if int(config.get('COMMON', 'job')) == 0:
     ### Ciclo sulle date
     for d in lista_date_start_forecast:
         f_estrazione(d)
     
 else:
-    Parallel(n_jobs=int(config.get('COMMON', 'job_joblib')), verbose=1000)(delayed(f_estrazione)(d) for d in lista_date_start_forecast)
+    Parallel(n_jobs=int(config.get('COMMON', 'job')), verbose=1000)(delayed(f_estrazione)(d) for d in lista_date_start_forecast)
     
 print('\n\nDone')
