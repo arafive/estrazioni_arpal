@@ -3,6 +3,7 @@ import os
 import time
 import string
 import configparser
+import multiprocessing
 
 import numpy as np
 import pandas as pd
@@ -80,6 +81,7 @@ def f_concatenazione(v):
             lista_datetime = pd.to_datetime([x.split('.')[0] for x in lista_file_tempi])
 
             for t, d in zip(lista_file_tempi, lista_datetime):
+                print(v, f, l, s, t)
                 cartella_df = f'{cartella_madre_estrazione}/{ora_start_forecast}/{v}/{f}/{l}/{s}'
 
                 try:
@@ -157,9 +159,15 @@ if int(config.get('CONCATENAZIONI', 'job')) == 0:
     ### Ciclo sulle variabili
     for v in lista_variabili:
         f_concatenazione(v)
-    
+
 else:
-    Parallel(n_jobs=int(config.get('CONCATENAZIONI', 'job')), verbose=1000)(delayed(f_concatenazione)(v) for v in lista_variabili)
+    if config.get('CONCATENAZIONI', 'tipo_di_parallellizzazione') == 'joblib':
+        Parallel(n_jobs=int(config.get('CONCATENAZIONI', 'job')), verbose=1000)(delayed(f_concatenazione)(v) for v in lista_variabili)
+    
+    elif config.get('CONCATENAZIONI', 'tipo_di_parallellizzazione') == 'multiprocessing':
+        pool = multiprocessing.Pool(processes=int(config.get('CONCATENAZIONI', 'job')))
+        pool.map(f_concatenazione, lista_variabili)
+        pool.close()
 
 # %%
 

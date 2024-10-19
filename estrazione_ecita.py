@@ -5,6 +5,7 @@ import time
 import string
 import cfgrib
 import configparser
+import multiprocessing
 
 import numpy as np
 import pandas as pd
@@ -167,8 +168,14 @@ if int(config.get('COMMON', 'job')) == 0:
     ### Ciclo sulle date
     for d in lista_date_start_forecast:
         f_estrazione(d)
-    
+
 else:
-    Parallel(n_jobs=int(config.get('COMMON', 'job')), verbose=1000)(delayed(f_estrazione)(d) for d in lista_date_start_forecast)
+    if config.get('COMMON', 'tipo_di_parallellizzazione') == 'joblib':
+        Parallel(n_jobs=int(config.get('COMMON', 'job')), verbose=1000)(delayed(f_estrazione)(d) for d in lista_date_start_forecast)
     
+    elif config.get('COMMON', 'tipo_di_parallellizzazione') == 'multiprocessing':
+        pool = multiprocessing.Pool(processes=int(config.get('COMMON', 'job')))
+        pool.map(f_estrazione, lista_date_start_forecast)
+        pool.close()
+        
 print('\n\nDone')
