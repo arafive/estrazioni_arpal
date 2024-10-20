@@ -54,6 +54,7 @@ def f_concatenazione(v):
 # for v in lista_variabili:
     
     nome_df_finale = f"{cartella_tmp}/df_{v}_{range_previsionale}_{dict_config_modelli[config.get('CONCATENAZIONI', 'modello')]}_{config.get('CONCATENAZIONI', 'regione')}.csv"
+    # nome_df_finale = f'~/Scrivania/test_{v}_{range_previsionale}.csv'
     
     if os.path.exists(nome_df_finale):
         print(f'{nome_df_finale} esiste già. Continuo.')
@@ -81,7 +82,7 @@ def f_concatenazione(v):
     
             for s in lista_stazioni:
                 t_inizio_s = time.time()
-                f_log_ciclo_for([['Variabile ', v, lista_variabili],
+                f_log_ciclo_for([[f'Variabile ({l}) ', v, lista_variabili],
                                  ['Stazione ', s, lista_stazioni]])
     
                 df_s = pd.DataFrame()
@@ -95,12 +96,14 @@ def f_concatenazione(v):
     
                     try:
                         df = pd.read_csv(f'{cartella_df}/{t}', index_col=0, parse_dates=True)
-                    except pd.errors.EmptyDataError:
+                    except pd.errors.EmptyDataError as e:
+                        print(e)
                         ### ECMWF/00/cape/fc/surface/TESTI/2021-02-03.csv erano vuoti, non so perchè
                         continue
                     
                     if '.' in df.columns[0]:
                         ### Colpa mia, solo nell'ecita
+                        ### ... secondo me è da qui che viene l'incongruenza di sotto con int()[1] o int()[2] ...
                         df.columns = [x.split('.')[0] for x in df.columns]
                         df.columns = [f"{x.split('_')[1]}_{x.split('_')[0]}" for x in df.columns]
                         
@@ -119,7 +122,7 @@ def f_concatenazione(v):
                     
                     if dict_config_modelli[config.get('CONCATENAZIONI', 'modello')] == 'ECMWF' and v in ['tp', 'cp']:
                         ### Ecita: non ha la tp3 ma una precipitazione cumualta dallo start fino alla fine
-                        df_shift = df.shift(periods=1, fill_value=0) # periods=1 per la tp3, nota bene che oltre +96 diventa ogni 6 ore
+                        df_shift = df.shift(periods=1, fill_value=0) # periods=1 per la tp3
                         df = df - df_shift
     
                     if df.index[0].hour == 0:
@@ -136,9 +139,14 @@ def f_concatenazione(v):
     
                     df_s = pd.concat([df_s, df], axis=0)
     
+                if range_previsionale == '24-48' or range_previsionale == '48-72':
+                    ### Tengo la prima previsione successiva
+                    df_s = df_s[~df_s.index.duplicated(keep='last')]
+                    
                 try:
                     df_v = pd.concat([df_v, df_s], axis=1)
-                except pd.errors.InvalidIndexError:
+                except pd.errors.InvalidIndexError as e:
+                    print(e)
                     ### Problemi con ECMWF/00/cape/fc/surface/TESTI/2023-12-31.csv
                     continue
     
@@ -162,8 +170,8 @@ def f_concatenazione(v):
 # # # # # # # #   # # # # # # # #   # # # # # # # #
 # # # # # # # #   # # # # # # # #   # # # # # # # #
 # # # # # # # #   # # # # # # # #   # # # # # # # #
-    
-    
+
+
 if int(config.get('CONCATENAZIONI', 'job')) == 0:
     ### Ciclo sulle variabili
     for v in lista_variabili:
@@ -219,9 +227,9 @@ for s in lista_stazioni:
     #####
 
     lista_colonne_u = [x for x in df_s.columns if x.startswith('u_') or x.startswith('u2PVU_')]
+    lista_colonne_v = [x for x in df_s.columns if x.startswith('v_') or x.startswith('v2PVU_')]
 
-    for col_u in lista_colonne_u:
-        col_v = f'v{col_u[1:]}'
+    for col_u, col_v in zip(lista_colonne_u, lista_colonne_v):
 
         ws = np.sqrt(df_s[col_u] ** 2 + df_s[col_v] ** 2)
         direz = np.deg2rad(wind_direction(df_s[col_u].values * units('m/s'), df_s[col_v].values * units('m/s'), convention='from').magnitude)
@@ -251,7 +259,10 @@ for s in lista_stazioni:
     lista_colonne_t = [x for x in df_s.columns if x.startswith('t_')]
 
     for col_t, col_q in zip(lista_colonne_t, lista_colonne_q):
-        livello = int(col_t.split('_')[1])
+        try:
+            livello = int(col_t.split('_')[1])
+        except:
+            livello = int(col_t.split('_')[2])
 
         df_s[col_q] = df_s[col_q] * 1000 # Da kg/kg a g/kg
         rh = np.array(relative_humidity_from_mixing_ratio(livello * units.hPa, df_s[col_t].values * units.K, df_s[col_q].values * units('g/kg')).to('percent'))
@@ -284,19 +295,26 @@ for s in lista_stazioni:
     #####
 
     for col_t in lista_colonne_t:
-        livello = int(col_t.split('_')[1])
+        try:
+            livello = int(col_t.split('_')[1])
+        except:
+            livello = int(col_t.split('_')[2])
+
         theta = np.array(potential_temperature(livello * units.hPa, df_s[col_t].values * units.K))
         df_theta = pd.DataFrame(theta, columns=[f'theta{col_t[1:]}'], index=df_s.index)
         
-        df_theta = pd.concat([df_s, df_theta], axis=1)
+        df_s = pd.concat([df_s, df_theta], axis=1)
 
     #####
     ##### Temperatura virtuale
     #####
 
     for col_t, col_q in zip(lista_colonne_t, lista_colonne_q):
-        livello = int(col_t.split('_')[1])
-
+        try:
+            livello = int(col_t.split('_')[1])
+        except:
+            livello = int(col_t.split('_')[2])
+            
         T_v = np.array(virtual_temperature(df_s[col_t].values * units.K, df_s[col_q].values * units('g/kg')))
         df_T_v = pd.DataFrame(T_v, columns=[f'Tv{col_t[1:]}'], index=df_s.index)
 
