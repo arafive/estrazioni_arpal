@@ -3,3 +3,4 @@ utilities/
 __pycache__/
 *.log
 .~lock*
+controllo_dataset_finali.py
