@@ -10,3 +10,4 @@ cfgrib
 joblib
 metpy
 odfpy
+pylint==3.3.*

@@ -51,15 +51,16 @@ cartella_tmp = f_crea_cartella(f'{cartella_output_concatenazioni}/tmp', print_me
 
 lista_variabili = sorted([x for x in os.listdir(f'{cartella_madre_estrazione}/{ora_start_forecast}') if not x.endswith('.txt')])
 
-# def f_concatenazione(v):
-for v in lista_variabili:
+def f_concatenazione(v):
+# for v in lista_variabili:
+    t_inizio_v = time.time()
     
     nome_df_finale = f"{cartella_tmp}/df_{v}_{range_previsionale}_{dict_config_modelli[config.get('CONCATENAZIONI', 'modello')]}_{config.get('CONCATENAZIONI', 'regione')}.csv"
     
     if os.path.exists(nome_df_finale):
         print(f'{nome_df_finale} esiste già. Continuo.')
-        continue
-        # return
+        # continue
+        return
         
     df_v = pd.DataFrame()
 
@@ -82,7 +83,7 @@ for v in lista_variabili:
 
         for s in lista_stazioni:
         # for s in lista_stazioni[0:2]:
-            t_inizio_s = time.time()
+            # t_inizio_s = time.time()
             f_log_ciclo_for([[f'Variabile ({l}) ', v, lista_variabili], ['Stazione ', s, lista_stazioni]])
 
             df_s = pd.DataFrame()
@@ -94,6 +95,7 @@ for v in lista_variabili:
             
             for t, d in zip(lista_file_tempi, lista_datetime):
                 # print(v, f, l, s, t)
+                # f_log_ciclo_for([[f'Variabile ({l}) ', v, lista_variabili], ['Stazione ', s, lista_stazioni], ['t = ', t, lista_file_tempi]])
                 cartella_df = f'{cartella_madre_estrazione}/{ora_start_forecast}/{v}/{f}/{l}/{s}'
 
                 try:
@@ -113,13 +115,13 @@ for v in lista_variabili:
                     ### Devo tenere solo quelli sempre presenti.
                     ### I venti tipo u10 non vengono tolti.
 
-                    livelli_hPa_da_togliere = [10] + list(np.arange(25, 325, 25))
+                    livelli_hPa_da_togliere = [10] + [int(x) for x in np.arange(25, 325, 25)]
                     for livello_da_togliere in livelli_hPa_da_togliere:
                         if livelli_hPa_da_togliere == 100:
                             ### Altrimenti mi toglie anche 1000
                             df = df.drop(columns=[f'100_{x}' for x in list(string.ascii_uppercase)[:punti_piu_vicini_da_estrarre]])
                         else:
-                            df = df.drop(columns=[x for x in df.columns if f'{livello_da_togliere}_' in x])
+                            df = df.drop(columns=[x for x in df.columns if f'_{livello_da_togliere}' in x])
                 
                 if dict_config_modelli[config.get('CONCATENAZIONI', 'modello')] == 'ECMWF' and v in ['tp', 'cp']:
                     ### Ecita: non ha la tp3 ma una precipitazione cumualta dallo start fino alla fine
@@ -154,15 +156,14 @@ for v in lista_variabili:
     ### Per non rischiare di generare un mostro di .csv, devo salvare a pezzetti.
 
     df_v = df_v[~df_v.index.duplicated(keep='last')]
-        
+    
     df_v = df_v.reindex(lista_completa_datetime, fill_value=np.nan)
     df_v = df_v.sort_index()
     df_v = df_v.dropna()
 
-    print(f'\nSalvo csv {nome_df_finale}\n')
     df_v.to_csv(nome_df_finale, index=True, header=True, mode='w', na_rep=np.nan)
 
-    f_printa_tempo_trascorso(t_inizio_s, time.time(), nota=f'Tempo per variabile {v}')
+    f_printa_tempo_trascorso(t_inizio_v, time.time(), nota=f'Tempo per variabile {v}')
     print()
     
 # # # # # # # #   # # # # # # # #   # # # # # # # #
@@ -170,19 +171,19 @@ for v in lista_variabili:
 # # # # # # # #   # # # # # # # #   # # # # # # # #
 
 
-# if int(config.get('CONCATENAZIONI', 'job')) == 0:
-#     ### Ciclo sulle variabili
-#     for v in lista_variabili:
-#         f_concatenazione(v)
+if int(config.get('CONCATENAZIONI', 'job')) == 0:
+    ### Ciclo sulle variabili
+    for v in lista_variabili:
+        f_concatenazione(v)
 
-# else:
-#     if config.get('CONCATENAZIONI', 'tipo_di_parallellizzazione') == 'joblib':
-#         Parallel(n_jobs=int(config.get('CONCATENAZIONI', 'job')), verbose=1000)(delayed(f_concatenazione)(v) for v in lista_variabili)
+else:
+    if config.get('CONCATENAZIONI', 'tipo_di_parallellizzazione') == 'joblib':
+        Parallel(n_jobs=int(config.get('CONCATENAZIONI', 'job')), verbose=1000)(delayed(f_concatenazione)(v) for v in lista_variabili)
     
-#     elif config.get('CONCATENAZIONI', 'tipo_di_parallellizzazione') == 'multiprocessing':
-#         pool = multiprocessing.Pool(processes=int(config.get('CONCATENAZIONI', 'job')))
-#         pool.map(f_concatenazione, lista_variabili)
-#         pool.close()
+    elif config.get('CONCATENAZIONI', 'tipo_di_parallellizzazione') == 'multiprocessing':
+        pool = multiprocessing.Pool(processes=int(config.get('CONCATENAZIONI', 'job')))
+        pool.map(f_concatenazione, lista_variabili)
+        pool.close()
 
 # %%
 
@@ -207,19 +208,27 @@ for s in lista_stazioni:
     
     for v in lista_variabili:
         df_v = pd.read_csv(f"{cartella_tmp}/df_{v}_{range_previsionale}_{dict_config_modelli[config.get('CONCATENAZIONI', 'modello')]}_{config.get('CONCATENAZIONI', 'regione')}.csv", index_col=0, parse_dates=True)
-        
+
         try:
             df_v.index = pd.to_datetime(df_v.index)
         except ValueError as e:
             print(f'\n\n{e}\n\n')
-            if config.get('CONCATENAZIONI', 'modello') == 'MOLOCH': # MOLOCH 0-24
+            if config.get('CONCATENAZIONI', 'modello') == 'MOLOCH' and range_previsionale == '0-24':
                 df_v = df_v.drop('2024-01-01', axis=0)
-            elif config.get('CONCATENAZIONI', 'modello') == 'ECMWF': # ECMWF 24-48
+            elif config.get('CONCATENAZIONI', 'modello') == 'ECMWF' and range_previsionale == '24-48':
                 df_v = df_v.drop('2022-02-22', axis=0)
+            elif config.get('CONCATENAZIONI', 'modello') == 'ECMWF' and range_previsionale == '48-72':
+                df_v = df_v.drop('2022-02-23', axis=0)
             df_v.index = pd.to_datetime(df_v.index)
             
         df_v_nan = df_v.dropna()
         print(f'\nMancano {df_v.shape[0] - df_v_nan.shape[0]} date al dataset di {v}\n') 
+        
+        ### con gh, quando concateno, i dati mi diventano nan
+        # if v == 'gh': stop
+
+        # missing_in_df_s = df_v.index.difference(df_s.index)
+        # missing_in_df_v = df_s.index.difference(df_v.index)
         
         df_s = pd.concat([df_s, df_v[[x for x in df_v if s in x]]], axis=1)
         assert not df_s.dropna().shape[0] == 0
@@ -228,6 +237,8 @@ for s in lista_stazioni:
     ### Rinomino i nomi delle colonne in modo che siano tutte con lo stesso nome tra i diversi modelli
     for chiave, valore in dict_nomi_variabili.items():
         df_s.columns = [x.replace(f'{chiave}_', f'{valore}_') for x in df_s.columns]
+        
+    assert df_s.dropna().shape[0] > int(df_s.shape[0] * 0.9), f'{df_s.dropna().shape[0]} < {int(df_s.shape[0] * 0.9)}'
         
     #####
     ##### La precipitazione di ECMWF ha bisogno di postprocessing per diventare tp3
@@ -241,6 +252,8 @@ for s in lista_stazioni:
         df_s[[x for x in df_s if x.startswith('cp')]] = df_s[[x for x in df_s if x.startswith('cp')]] * 1000
         
         df_s[colonne_tp] = df_s[colonne_tp].clip(lower=0) # se è <0, va a 0
+    
+    assert df_s.dropna().shape[0] > int(df_s.shape[0] * 0.9), f'{df_s.dropna().shape[0]} < {int(df_s.shape[0] * 0.9)}'
     
     #####
     ##### Cumulate precipitative
@@ -276,6 +289,8 @@ for s in lista_stazioni:
         valore.index = valore.index + pd.Timedelta(seconds=1)
         df_s = pd.concat([df_s, valore], axis=1)
     
+    assert df_s.dropna().shape[0] > int(df_s.shape[0] * 0.9)
+    
     #####
     ##### Copertura nuvolosa
     #####
@@ -285,6 +300,8 @@ for s in lista_stazioni:
         for nuvola in ['tcc', 'hcc', 'mcc', 'lcc']:
             lista_colonne_nuvole = [x for x in df_s.columns if x.startswith(nuvola)]
             df_s[lista_colonne_nuvole] = (df_s[lista_colonne_nuvole] * 100).round(3) # Da (0-1) a %
+
+    assert df_s.dropna().shape[0] > int(df_s.shape[0] * 0.9)
 
     #####
     ##### Modulo e direzione del vento
@@ -315,6 +332,8 @@ for s in lista_stazioni:
     
         df_s = pd.concat([df_s, df_ws10, df_direz10], axis=1)
     
+    assert df_s.dropna().shape[0] > int(df_s.shape[0] * 0.9)
+    
     #####
     ##### Umidità relativa
     #####
@@ -340,7 +359,6 @@ for s in lista_stazioni:
             df_rh2m = pd.DataFrame(rh2m, columns=[col_t2m.replace('t2m', 'rh2m')], index=df_s.index)
     
             df_s = pd.concat([df_s, df_rh2m], axis=1)
-            
     
     if dict_config_modelli[config.get('CONCATENAZIONI', 'modello')] in ['BOLAM', 'MOLOCH']:
         lista_colonne_t2m = [x for x in df_s.columns if x.startswith('t2m_')]
@@ -351,6 +369,8 @@ for s in lista_stazioni:
             df_d2m = pd.DataFrame(d2m, columns=[col_t2m.replace('t2m', 'd2m')], index=df_s.index)
         
             df_s = pd.concat([df_s, df_d2m], axis=1)
+    
+    assert df_s.dropna().shape[0] > int(df_s.shape[0] * 0.9)
         
     #####
     ##### Temperatura potenziale
@@ -364,6 +384,8 @@ for s in lista_stazioni:
         
         df_s = pd.concat([df_s, df_theta], axis=1)
 
+    assert df_s.dropna().shape[0] > int(df_s.shape[0] * 0.9)
+
     #####
     ##### Temperatura virtuale
     #####
@@ -375,6 +397,8 @@ for s in lista_stazioni:
         df_T_v = pd.DataFrame(T_v, columns=[f'Tv{col_t[1:]}'], index=df_s.index)
 
         df_s = pd.concat([df_s, df_T_v], axis=1)
+
+    assert df_s.dropna().shape[0] > int(df_s.shape[0] * 0.9)
 
     #####
     ##### Seni e coseni di ora e mese
@@ -422,6 +446,8 @@ for s in lista_stazioni:
             
     assert colonne_modello == colonne_df_s
     
+    assert df_s.dropna().shape[0] > int(df_s.shape[0] * 0.9)
+
     #####
     ##### Confronto con gli osservati di temperatura
     ##### Funziona, non mi serve più vedere il plot ogni volta
