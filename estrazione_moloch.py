@@ -215,5 +215,6 @@ else:
         pool = multiprocessing.Pool(processes=int(config.get('COMMON', 'job')))
         pool.map(f_estrazione, lista_date_start_forecast)
         pool.close()
+        pool.join() # Aspetta che tutti finiscano
         
 print('\n\nDone')

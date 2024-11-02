@@ -184,6 +184,7 @@ else:
         pool = multiprocessing.Pool(processes=int(config.get('CONCATENAZIONI', 'job')))
         pool.map(f_concatenazione, lista_variabili)
         pool.close()
+        pool.join() # Aspetta che tutti finiscano
 
 # %%
 
