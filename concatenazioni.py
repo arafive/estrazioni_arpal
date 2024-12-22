@@ -19,6 +19,14 @@ from metpy.calc import virtual_temperature
 from joblib import delayed
 from joblib import Parallel
 
+lista_possibili_cartelle_lavoro = [
+    '/media/daniele/Daniele2TB/repo/estrazioni_arpal',
+    '/run/media/daniele.carnevale/Daniele2TB/repo/estrazioni_arpal',
+    ]
+
+os.chdir([x for x in lista_possibili_cartelle_lavoro if os.path.exists(x)][0])
+del (lista_possibili_cartelle_lavoro)
+
 from funzioni import f_log_ciclo_for
 from funzioni import f_crea_cartella
 from funzioni import f_round
@@ -51,16 +59,16 @@ cartella_tmp = f_crea_cartella(f'{cartella_output_concatenazioni}/tmp', print_me
 
 lista_variabili = sorted([x for x in os.listdir(f'{cartella_madre_estrazione}/{ora_start_forecast}') if not x.endswith('.txt')])
 
-def f_concatenazione(v):
-# for v in lista_variabili:
+# def f_concatenazione(v):
+for v in lista_variabili:
     t_inizio_v = time.time()
     
     nome_df_finale = f"{cartella_tmp}/df_{v}_{range_previsionale}_{dict_config_modelli[config.get('CONCATENAZIONI', 'modello')]}_{config.get('CONCATENAZIONI', 'regione')}.csv"
     
     if os.path.exists(nome_df_finale):
         print(f'{nome_df_finale} esiste già. Continuo.')
-        # continue
-        return
+        continue
+        # return
         
     df_v = pd.DataFrame()
 
@@ -171,20 +179,20 @@ def f_concatenazione(v):
 # # # # # # # #   # # # # # # # #   # # # # # # # #
 
 
-if int(config.get('CONCATENAZIONI', 'job')) == 0:
-    ### Ciclo sulle variabili
-    for v in lista_variabili:
-        f_concatenazione(v)
+# if int(config.get('CONCATENAZIONI', 'job')) == 0:
+#     ### Ciclo sulle variabili
+#     for v in lista_variabili:
+#         f_concatenazione(v)
 
-else:
-    if config.get('CONCATENAZIONI', 'tipo_di_parallellizzazione') == 'joblib':
-        Parallel(n_jobs=int(config.get('CONCATENAZIONI', 'job')), verbose=1000)(delayed(f_concatenazione)(v) for v in lista_variabili)
+# else:
+#     if config.get('CONCATENAZIONI', 'tipo_di_parallellizzazione') == 'joblib':
+#         Parallel(n_jobs=int(config.get('CONCATENAZIONI', 'job')), verbose=1000)(delayed(f_concatenazione)(v) for v in lista_variabili)
     
-    elif config.get('CONCATENAZIONI', 'tipo_di_parallellizzazione') == 'multiprocessing':
-        pool = multiprocessing.Pool(processes=int(config.get('CONCATENAZIONI', 'job')))
-        pool.map(f_concatenazione, lista_variabili)
-        pool.close()
-        pool.join() # Aspetta che tutti finiscano
+#     elif config.get('CONCATENAZIONI', 'tipo_di_parallellizzazione') == 'multiprocessing':
+#         pool = multiprocessing.Pool(processes=int(config.get('CONCATENAZIONI', 'job')))
+#         pool.map(f_concatenazione, lista_variabili)
+#         pool.close()
+#         pool.join() # Aspetta che tutti finiscano
 
 # %%
 

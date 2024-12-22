@@ -1,10 +1,70 @@
 
 import os
+import sys
+import logging
+import configparser
 
 import numpy as np
 import pandas as pd
 
 from datetime import timedelta
+
+def f_logger(livello_minimo='INFO'):
+    """Crea un logger per stampare log colorati sul terminale e normali su un file di log."""
+    # https://betterstack.com/community/guides/logging/how-to-start-logging-with-python/
+    
+    resetta_colore = '\033[0m'
+    dict_colori = {
+        'DEBUG': '\033[3;36m',    # Ciano, 3; vuol dire italic
+        'INFO': '\033[32m',       # Verde
+        'WARNING': '\033[5;33m',  # Giallo, 5; vuol dire che lampeggia
+        'ERROR': '\033[1;31m',    # Rosso, 1; vuol dire bold
+        'CRITICAL': '\033[4;35m', # Magenta, 4; vuol dire sottolineato
+        'D': '\033[3;36m',
+        'I': '\033[32m',
+        'W': '\033[5;33m',
+        'E': '\033[1;31m',
+        'C': '\033[4;35m'
+    }
+    
+    class ColoredFormatter(logging.Formatter):
+        def __init__(self, fmt, datefmt):
+            super().__init__(fmt, datefmt)
+
+        def format(self, record):
+            levelname = record.levelname
+            
+            # Se l'output è su un file, evita i colori
+            if isinstance(levelname, str) and sys.stdout.isatty():
+                log_color = dict_colori.get(levelname, resetta_colore)
+                # record.levelname = f'{log_color}{levelname[0:1]}{resetta_colore}'
+                record.levelname = f'{log_color}{levelname:<8}{resetta_colore}'
+            else:
+                # record.levelname = levelname[0:1]
+                record.levelname = f'{levelname:<8}'
+                
+            return super().format(record)
+    
+    handler = logging.StreamHandler(sys.stdout)
+    formato = '%(levelname)s | %(asctime)s.%(msecs)03d | %(filename)s:%(lineno)-4s | ID:%(process)d >>> %(message)s'
+    datefmt = '%Y-%m-%d %H:%M:%S'
+    handler.setFormatter(ColoredFormatter(formato, datefmt=datefmt))
+    
+    logging.basicConfig(handlers=[handler])
+    logger = logging.getLogger()
+    level = logging.getLevelName(livello_minimo)
+    logger.setLevel(level)
+    
+    return logger
+
+
+config = configparser.ConfigParser()
+config.read('./config.ini')
+logger = f_logger(config.get('COMMON', 'livello_minimo_logging'))
+del (config)
+# # # # # # # #   # # # # # # # #   # # # # # # # #
+# # # # # # # #   # # # # # # # #   # # # # # # # #
+# # # # # # # #   # # # # # # # #   # # # # # # # #
 
 
 def f_log_ciclo_for(lista_di_liste):
@@ -31,10 +91,11 @@ def f_log_ciclo_for(lista_di_liste):
         if not n == len(lista_di_liste):
             str_output = str_output + ' · '
 
-    print(str_output)
+    # print(str_output)
+    logger.info(str_output)
     
     
-def f_crea_cartella(percorso_cartella, print_messaggio=True):
+def f_crea_cartella(percorso_cartella):
     """Crea una cartella, printa per conferma e ritorna il percorso.
     
     Parameters
@@ -49,8 +110,8 @@ def f_crea_cartella(percorso_cartella, print_messaggio=True):
 
     """
     os.makedirs(percorso_cartella, exist_ok=True)
-    if print_messaggio:
-        print(f'Creata cartella {percorso_cartella}\n')
+    # print(f'Creata cartella {percorso_cartella}')
+    logger.debug(f'Creata cartella {percorso_cartella}')
 
     return percorso_cartella
 
@@ -74,25 +135,25 @@ def f_printa_tempo_trascorso(t_inizio, t_fine, nota=False):
     secondi = f'{elapsed_tempo.seconds%60:02}'
     millisecondi = elapsed_tempo.microseconds / 1000
     
-    msg = f'\n>>> {int(secondi)}.{int(millisecondi)} sec'
+    msg = f'{int(secondi)}.{int(millisecondi)} sec'
 
     if int(minuti) > 0:
-        msg = f'\n>>> {minuti}:{secondi} min'
+        msg = f'{minuti}:{secondi} min'
     
     if int(ore) > 0:
-        msg = f'\n>>> {ore}:{minuti}:{secondi} ore'
+        msg = f'{ore}:{minuti}:{secondi} ore'
     
     if int(giorni) > 0:
         if int(giorni) == 1:
-            msg = f'\n>>> {giorni} giorno, {ore}:{minuti}:{secondi} ore'
+            msg = f'{giorni} giorno, {ore}:{minuti}:{secondi} ore'
         else:
-            msg = f'\n>>> {giorni} giorni, {ore}:{minuti}:{secondi} ore'
+            msg = f'{giorni} giorni, {ore}:{minuti}:{secondi} ore'
     
     if nota:
-        msg = msg[:4] + f' {nota}: ' + msg[5:]
+        msg = f'{nota}: {msg}'
         
-    print(msg)
-    
+    # print(msg)
+    logger.debug(msg)
     
 
 def f_dataframe_ds_variabili(lista_ds):

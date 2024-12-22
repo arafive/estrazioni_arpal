@@ -4,3 +4,4 @@ __pycache__/
 *.log
 .~lock*
 controllo_dataset_finali.py
+dict_camminata.pkl

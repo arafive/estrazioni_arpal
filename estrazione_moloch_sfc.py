@@ -19,10 +19,13 @@ from funzioni import f_crea_cartella
 from funzioni import f_printa_tempo_trascorso
 from funzioni import f_dataframe_ds_variabili
 from funzioni import f_round
+from funzioni import f_logger
 
 
 config = configparser.ConfigParser()
 config.read('./config.ini')
+
+logger = f_logger(config.get('COMMON', 'livello_minimo_logging'))
 
 cartella_madre_estrazione = f_crea_cartella(f"{config.get('COMMON', 'cartella_madre_estrazione')}/MOLOCHsfc")
 
@@ -48,7 +51,7 @@ def f_estrazione(d):
     nome_file_grib = f"molita15sfc_{d.year}{d.month:02d}{d.day:02d}{config.get('COMMON', 'ora_start_forecast')}.grib2"
 
     if not os.path.exists(f'{percorso_file_grib}/{nome_file_grib}'):
-        print(f'!!! File {nome_file_grib} non presente nella cartella {percorso_file_grib}. Continuo')
+        logger.warning('File {nome_file_grib} non presente nella cartella {percorso_file_grib}. Continuo')
         return
         # continue
     
@@ -80,7 +83,7 @@ def f_estrazione(d):
         t_inizio_v = time.time()
         
         if v not in df_attrs.index:
-            print(f'!!! Variabile {v} non presente nel file {nome_file_grib}. Continuo')
+            logger.warning('Variabile {v} non presente nel file {nome_file_grib}. Continuo')
             continue
         
         df_sub_attrs = df_attrs.loc[v, :]
@@ -111,6 +114,7 @@ def f_estrazione(d):
                 livelli = ds[grib_typeOfLevel].values
                 
             livelli = [int(x) for x in livelli]
+            logger.debug(f'{nome_var}, {livelli}')
 
             ### Ciclo sulle stazioni
             for s in df_file_coordinate.index:
@@ -125,7 +129,7 @@ def f_estrazione(d):
                 df_estrazione = pd.DataFrame()
                 
                 if os.path.exists(f"{cartella_estrazione}/{str(inizio_run).split(' ')[0]}.csv"):
-                    # print(f"{cartella_estrazione}/{str(inizio_run).split(' ')[0]}.csv esiste. Continuo." )
+                    logger.debug(f"{cartella_estrazione}/{str(inizio_run).split(' ')[0]}.csv esiste. Continuo")
                     continue
 
                 ### Ciclo sui punti
@@ -148,7 +152,8 @@ def f_estrazione(d):
                         df_estrazione = pd.concat([df_estrazione, pd.DataFrame(estrazione, index=[tempi], columns=[lettera])], axis=1)
 
                     else:
-                        raise Exception('Caso non contemplato: ', nome_var, grib_dataType, grib_typeOfLevel, ds[nome_var].values.shape, len(ds[nome_var].values.shape))
+                        logger.error(f'Caso non contemplato: {nome_var}, {grib_dataType}, {grib_typeOfLevel}, {ds[nome_var].values.shape}, {len(ds[nome_var].values.shape)}')
+                        exit(1)
 
                 try:
                     df_estrazione = df_estrazione.astype(float).map(f_round, digits=3)
@@ -159,7 +164,7 @@ def f_estrazione(d):
                 
             f_printa_tempo_trascorso(t_inizio_v, time.time(), nota=f'Tempo per variabile {v} (indice {i})')
                 
-    f_printa_tempo_trascorso(t_inizio_d, time.time(), nota=f'Tempo per d = {d}')
+    f_printa_tempo_trascorso(t_inizio_d, time.time(), nota=f'Tempo per data {d}')
     print()
 
 # # # # # # # #   # # # # # # # #   # # # # # # # #

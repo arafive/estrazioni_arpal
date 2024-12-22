@@ -9,10 +9,35 @@ oltre a 'id_ds' dove si trova la variabile. In questo modo posso estrarre le var
 Ci sono alcune variabili (es., cin, cape) che non hanno l'analisi (an). Ovviamente ci sta. Altre variabili (es., u10, v10)
 hanno sia l'analisi (an) che la previsione (fc).
 
-# TODO Fin'ora prendo gli N punti più vicini, vorrei poter prendere anche gli N punti all'interno di un raggio R attorno al punto stazione -> haversine
+ ___ _                              _      _      
+| __| |_  _ ______ ___   ___ __ _ _(_)_ __| |_ ___
+| _|| | || (_-<_-</ _ \ (_-</ _| '_| | '_ \  _(_-<
+|_| |_|\_,_/__/__/\___/ /__/\__|_| |_| .__/\__/__/
+                                     |_|          
 
-# TODO Per ora la mia funzione di arrotondamento fa il round solo se il numero non è 0.qualcosa;
+1) Modifica "config.ini" in modo opportuno.
 
-# TODO Aggiungi il salvataggio degli interi campi di precipitazione, vento e temperatura
+2) Lancia un run "estrazione_*".
 
-# TODO Fare un salvataggio più intelligente e razionale degli output (pkl ?)
+3) Lo script "concatenazioni.py" serve per creare dei grossi dataset per le reti.
+
+4) Lo script "controllo_dataset_finali.py" serve per un ulteriore controllo che la concatenazione abbia funzionato bene.
+
+5) [Opzionale] Lo script "riassunto_stato_cartelle_estrazioni.py" crea un dizionario "dict_camminata.pkl" per avere una
+panoramica del contenuto della cartella con tutti i .csv estratti
+
+6) [Opzionale] Lo script "tar_estrazioni.py" serve a creare dei .tar.gz delle cartelle estratte, così da venire essere
+più comodo spostarle.
+
+ _____    ___      
+|_   _|__|   \ ___ 
+  | |/ _ \ |) / _ \
+  |_|\___/___/\___/
+
+Fin'ora prendo gli N punti più vicini, vorrei poter prendere anche gli N punti all'interno di un raggio R attorno al punto stazione -> haversine
+
+Per ora la mia funzione di arrotondamento fa il round solo se il numero non è 0.qualcosa;
+
+Aggiungi il salvataggio degli interi campi di precipitazione, vento e temperatura
+
+Fare un salvataggio più intelligente e razionale degli output (pkl ?)
