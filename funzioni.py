@@ -46,7 +46,7 @@ def f_logger(livello_minimo='INFO'):
             return super().format(record)
     
     handler = logging.StreamHandler(sys.stdout)
-    formato = '%(levelname)s | %(asctime)s.%(msecs)03d | %(filename)s:%(lineno)-4s | ID:%(process)d >>> %(message)s'
+    formato = '%(levelname)s | %(asctime)s.%(msecs)03d | %(filename)s:%(lineno)-4s | %(process)d >>> %(message)s'
     datefmt = '%Y-%m-%d %H:%M:%S'
     handler.setFormatter(ColoredFormatter(formato, datefmt=datefmt))
     

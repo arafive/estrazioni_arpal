@@ -55,18 +55,20 @@ for m in modelli:
                         comando = f'tar -zcf {cartella_dove_zippare}/{nome_file_targz} {cartella_da_zippare}'
                         logger.info(comando)
                         os.system(comando)
-    
     else:
-        logger.debug(f'Cartella {cartella_madre_estrazioni}/{m} NON trovata. Continuo.')
-            
+        logger.warning(f'Cartella {cartella_madre_estrazioni}/{m} NON trovata. Continuo.')
+
 print('\n\nDone.')
 
+# rsync -arzhPv --prune-empty-dirs --size-only --info=progress2 --include="*/" --include="*.tar.gz" --exclude="*" daniele.carnevale@01588-lenovo.cfmi.arpal.org:/home/cfmi.arpal.org/daniele.carnevale/Scrivania/estrazioni_arpal/Estrazioni_AIxtreme/Liguria/ECMWF /media/daniele/Daniele2TB/test/rete_pioggia/Estrazioni_AIxtreme/Liguria/.
+
 ### Note per il trasferimento con rsync di soli i tar.gz
-# rsync -av --include="*/" --include="*.tar.gz" --exclude="*" /source/directory/ /destination/directory/
+# rsync -av --prune-empty-dirs --include="*/" --include="*.tar.gz" --exclude="*" /source/directory/ /destination/directory/
 
 # Explanation:
 # -a: Archive mode (preserves permissions, timestamps, symbolic links, etc.).
 # -v: Verbose (shows what is being transferred).
+# --prune-empty-dirs: Ensures that directories without .tar.gz files are not copied, even if they exist in the source.
 # --include="*/": Ensures that the directory structure is copied, even if the directories don't contain .tar.gz files.
 # --include="*.tar.gz": Includes only files ending with .tar.gz.
 # --exclude="*": Excludes everything else that doesn't match the previous include patterns.
