@@ -2,6 +2,7 @@
 import os
 import sys
 import logging
+import collections
 import configparser
 
 import numpy as np
@@ -215,3 +216,17 @@ def f_round(a, digits=3):
     else:
         return np.float32(np.round(a, decimals=digits))
     
+
+def f_check_duplicati(a):
+    """Controlla se nel dataframe ci sono dei duplicati.
+    
+    Parameters
+    ----------
+    a : pandas.core.frame.DataFrame
+
+    """
+    indici = [str(x) for x in a.index.tolist()]
+    duplicati = [x for x, conteggio in collections.Counter(indici).items() if conteggio > 1]
+    
+    if len(duplicati) > 0:
+        logger.warning(f'Ho trovato {len(duplicati)}: {duplicati}')
