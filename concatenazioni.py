@@ -64,6 +64,7 @@ lista_variabili = sorted([x for x in os.listdir(f'{cartella_madre_estrazione}/{o
 
 # def f_concatenazione(v):
 for v in lista_variabili:
+# for v in ['q']:
     
     # if v == 'w' and config.get('CONCATENAZIONI', 'modello') == 'ECMWF':
     #     logger.info('Modello ECMWF, salto la variabile w perchè non ha i livelli in quota, oltre 500 hPa')
@@ -128,11 +129,11 @@ for v in lista_variabili:
                     ### Ecita non ha sempre avuto un numero costante di livelli in pressione.
                     ### Devo tenere solo quelli sempre presenti.
                     ### I venti tipo u10 non vengono tolti.
-                    logger.debug('Togldo dei livelli dal df di ECITA.')
+                    logger.debug('Tolgo dei livelli dal df di ECITA.')
                     livelli_hPa_da_togliere = [10] + [int(x) for x in np.arange(25, 325, 25)]
                     for livello_da_togliere in livelli_hPa_da_togliere:
-                        df = df.drop(columns=[x for x in df.columns if livello_da_togliere in x.split('_')])
-                
+                        df = df.drop(columns=[x for x in df.columns if str(livello_da_togliere) in x.split('_')])
+                    
                 if dict_config_modelli[config.get('CONCATENAZIONI', 'modello')] == 'ECMWF' and v in ['tp', 'cp']:
                     ### Ecita: non ha la tp3 ma una precipitazione cumulata dallo start fino alla fine
                     logger.debug(f'Rendo la {v} di ECITA una cumulata nelle ore.')
@@ -179,7 +180,7 @@ for v in lista_variabili:
 
     f_printa_tempo_trascorso(t_inizio_v, time.time(), nota=f'Tempo per variabile {v}')
     print()
-    
+
 # # # # # # # #   # # # # # # # #   # # # # # # # #
 # # # # # # # #   # # # # # # # #   # # # # # # # #
 # # # # # # # #   # # # # # # # #   # # # # # # # #
@@ -201,7 +202,8 @@ for v in lista_variabili:
 #         pool.join() # Aspetta che tutti finiscano
 
 # %%
-exit(0)
+# exit(0)
+
 dict_nomi_variabili = {
     'capecon' : 'cape',
     'clct' : 'tcc',
@@ -228,16 +230,18 @@ for s in lista_stazioni:
             df_v.index = pd.to_datetime(df_v.index)
         except ValueError as e:
             logger.warning(e)
+            
             if config.get('CONCATENAZIONI', 'modello') == 'MOLOCH' and range_previsionale == '0-24':
                 df_v = df_v.drop('2024-01-01', axis=0)
             elif config.get('CONCATENAZIONI', 'modello') == 'ECMWF' and range_previsionale == '24-48':
                 df_v = df_v.drop('2022-02-22', axis=0)
             elif config.get('CONCATENAZIONI', 'modello') == 'ECMWF' and range_previsionale == '48-72':
                 df_v = df_v.drop('2022-02-23', axis=0)
+            
             df_v.index = pd.to_datetime(df_v.index)
             
         df_v_nan = df_v.dropna()
-        logger.warning(f'\nMancano {df_v.shape[0] - df_v_nan.shape[0]} date al dataset di {v}\n') 
+        logger.debug(f'Mancano {df_v.shape[0] - df_v_nan.shape[0]} date al dataset di {v}')
         
         ### con gh, quando concateno, i dati mi diventano nan
         # if v == 'gh': stop
@@ -247,8 +251,9 @@ for s in lista_stazioni:
         
         df_s = pd.concat([df_s, df_v[[x for x in df_v if s in x]]], axis=1)
         assert not df_s.dropna().shape[0] == 0
+        
     del (v)
-
+    sss
     ### Rinomino i nomi delle colonne in modo che siano tutte con lo stesso nome tra i diversi modelli
     for chiave, valore in dict_nomi_variabili.items():
         df_s.columns = [x.replace(f'{chiave}_', f'{valore}_') for x in df_s.columns]
