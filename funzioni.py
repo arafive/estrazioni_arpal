@@ -178,7 +178,7 @@ def f_dataframe_ds_variabili(lista_ds):
         for v in [x for x in ds.data_vars]:
             df_attrs = pd.concat([df_attrs, pd.DataFrame({**{'id_ds': i}, **ds[v].attrs}, index=[v])])
             
-    ### Elimino le colonne i vuoi valori sono comuni a tutte le righe
+    ### Elimino le colonne i cui valori sono comuni a tutte le righe
     for i in df_attrs:
         if len(set(df_attrs[i].tolist())) == 1:
             df_attrs = df_attrs.drop(columns=[i])
@@ -217,16 +217,17 @@ def f_round(a, digits=3):
         return np.float32(np.round(a, decimals=digits))
     
 
-def f_check_duplicati(a):
+def f_check_duplicati(df):
     """Controlla se nel dataframe ci sono dei duplicati.
     
     Parameters
     ----------
-    a : pandas.core.frame.DataFrame
+    df : pandas.core.frame.DataFrame
 
     """
-    indici = [str(x) for x in a.index.tolist()]
+    indici = [str(x) for x in df.index.tolist()]
     duplicati = [x for x, conteggio in collections.Counter(indici).items() if conteggio > 1]
     
     if len(duplicati) > 0:
-        logger.warning(f'Ho trovato {len(duplicati)}: {duplicati}')
+        # logger.warning(f'Ho trovato {len(duplicati)}: {duplicati}')
+        logger.warning(f'Ho trovato {len(duplicati)} duplicati')

@@ -43,7 +43,7 @@ lista_date_start_forecast = pd.date_range(f"{config.get('COMMON', 'data_inizio_e
 def f_estrazione(d):
 # for d in lista_date_start_forecast:
     t_inizio_d = time.time()
-    f_log_ciclo_for([['Data ', d, lista_date_start_forecast]])
+    # f_log_ciclo_for([['Data ', d, lista_date_start_forecast]])
     
     sub_cartella_grib = f'{d.year}/{d.month:02d}/{d.day:02d}'
 
@@ -51,7 +51,7 @@ def f_estrazione(d):
     nome_file_grib = f"bo08_{d.year}{d.month:02d}{d.day:02d}{config.get('COMMON', 'ora_start_forecast')}.grib2"
 
     if not os.path.exists(f'{percorso_file_grib}/{nome_file_grib}'):
-        logger.warning('File {nome_file_grib} non presente nella cartella {percorso_file_grib}. Continuo')
+        logger.warning(f'File {nome_file_grib} non presente nella cartella {percorso_file_grib}. Continuo')
         return
         # continue
     
@@ -108,7 +108,7 @@ def f_estrazione(d):
         t_inizio_v = time.time()
         
         if v not in df_attrs.index:
-            logger.warning('Variabile {v} non presente nel file {nome_file_grib}. Continuo')
+            logger.warning(f'Variabile {v} non presente nel file {nome_file_grib}. Continuo')
             continue
         
         df_sub_attrs = df_attrs.loc[v, :]
@@ -119,8 +119,7 @@ def f_estrazione(d):
         ### Ciclo sulla posizione degli indici
         for i in range(df_sub_attrs.shape[0]):
             
-            # f_log_ciclo_for([['Data ', d, lista_date_start_forecast],
-            #                   [f'Variabile (indice {i}) ', v, ast.literal_eval(config.get('BOLAM', 'variabili_da_estratte'))]])
+            f_log_ciclo_for([['Data ', d, lista_date_start_forecast], [f'Variabile (indice {i}) ', v, ast.literal_eval(config.get('BOLAM', 'variabili_da_estratte'))]])
             
             nome_var = df_sub_attrs.index[0]
             grib_dataType = df_sub_attrs.iloc[i]['GRIB_dataType']
@@ -143,7 +142,7 @@ def f_estrazione(d):
 
             ### Ciclo sulle stazioni
             for s in df_file_coordinate.index:
-                cartella_estrazione = f_crea_cartella(f"{cartella_madre_estrazione}/{config.get('COMMON', 'ora_start_forecast')}/{nome_var}/{grib_dataType}/{grib_typeOfLevel}/{s}", print_messaggio=False)
+                cartella_estrazione = f_crea_cartella(f"{cartella_madre_estrazione}/{config.get('COMMON', 'ora_start_forecast')}/{nome_var}/{grib_dataType}/{grib_typeOfLevel}/{s}")
                 
                 lat_s = df_file_coordinate.loc[s, 'Latitude']
                 lon_s = df_file_coordinate.loc[s, 'Longitude']

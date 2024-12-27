@@ -217,6 +217,8 @@ dict_nomi_variabili = {
 print('\nCreazione dei dataset delle singole stazioni\n')
 
 lista_stazioni = pd.read_csv(config.get('COMMON', 'percorso_file_coordinate'), index_col=0).index.tolist()
+cartella_df_s_tutti_i_punti = f_crea_cartella(f'{cartella_output_concatenazioni}/dataset_tutti_i_punti')
+cartella_df_s_A = f_crea_cartella(f'{cartella_output_concatenazioni}/dataset_A')
 
 for s in lista_stazioni:
     f_log_ciclo_for([['Stazione ', s, lista_stazioni]])
@@ -242,6 +244,7 @@ for s in lista_stazioni:
             
         df_v_nan = df_v.dropna()
         logger.debug(f'Mancano {df_v.shape[0] - df_v_nan.shape[0]} date al dataset di {v}')
+        del (df_v_nan)
         
         ### con gh, quando concateno, i dati mi diventano nan
         # if v == 'gh': stop
@@ -253,7 +256,7 @@ for s in lista_stazioni:
         assert not df_s.dropna().shape[0] == 0
         
     del (v)
-    sss
+
     ### Rinomino i nomi delle colonne in modo che siano tutte con lo stesso nome tra i diversi modelli
     for chiave, valore in dict_nomi_variabili.items():
         df_s.columns = [x.replace(f'{chiave}_', f'{valore}_') for x in df_s.columns]
@@ -309,7 +312,7 @@ for s in lista_stazioni:
         valore.index = valore.index + pd.Timedelta(seconds=1)
         df_s = pd.concat([df_s, valore], axis=1)
     
-    assert df_s.dropna().shape[0] > int(df_s.shape[0] * 0.9)
+    assert df_s.dropna().shape[0] > int(df_s.shape[0] * 0.9), f'{df_s.dropna().shape[0]} < {int(df_s.shape[0] * 0.9)}'
     
     #####
     ##### Copertura nuvolosa
@@ -321,7 +324,7 @@ for s in lista_stazioni:
             lista_colonne_nuvole = [x for x in df_s.columns if x.startswith(nuvola)]
             df_s[lista_colonne_nuvole] = (df_s[lista_colonne_nuvole] * 100).round(3) # Da (0-1) a %
 
-    assert df_s.dropna().shape[0] > int(df_s.shape[0] * 0.9)
+    assert df_s.dropna().shape[0] > int(df_s.shape[0] * 0.9), f'{df_s.dropna().shape[0]} < {int(df_s.shape[0] * 0.9)}'
 
     #####
     ##### Modulo e direzione del vento
@@ -352,7 +355,7 @@ for s in lista_stazioni:
     
         df_s = pd.concat([df_s, df_ws10, df_direz10], axis=1)
     
-    assert df_s.dropna().shape[0] > int(df_s.shape[0] * 0.9)
+    assert df_s.dropna().shape[0] > int(df_s.shape[0] * 0.9), f'{df_s.dropna().shape[0]} < {int(df_s.shape[0] * 0.9)}'
     
     #####
     ##### Umidità relativa
@@ -390,7 +393,7 @@ for s in lista_stazioni:
         
             df_s = pd.concat([df_s, df_d2m], axis=1)
     
-    assert df_s.dropna().shape[0] > int(df_s.shape[0] * 0.9)
+    assert df_s.dropna().shape[0] > int(df_s.shape[0] * 0.9), f'{df_s.dropna().shape[0]} < {int(df_s.shape[0] * 0.9)}'
         
     #####
     ##### Temperatura potenziale
@@ -404,7 +407,7 @@ for s in lista_stazioni:
         
         df_s = pd.concat([df_s, df_theta], axis=1)
 
-    assert df_s.dropna().shape[0] > int(df_s.shape[0] * 0.9)
+    assert df_s.dropna().shape[0] > int(df_s.shape[0] * 0.9), f'{df_s.dropna().shape[0]} < {int(df_s.shape[0] * 0.9)}'
 
     #####
     ##### Temperatura virtuale
@@ -418,7 +421,7 @@ for s in lista_stazioni:
 
         df_s = pd.concat([df_s, df_T_v], axis=1)
 
-    assert df_s.dropna().shape[0] > int(df_s.shape[0] * 0.9)
+    assert df_s.dropna().shape[0] > int(df_s.shape[0] * 0.9), f'{df_s.dropna().shape[0]} < {int(df_s.shape[0] * 0.9)}'
 
     #####
     ##### Seni e coseni di ora e mese
@@ -454,7 +457,7 @@ for s in lista_stazioni:
     # df = df.dropna()
 
     df_nan = df_s[df_s.isna().any(axis=1)]
-    logger.warning(f'\nMancano {df_nan.shape[0]} date\n') 
+    logger.warning(f'Mancano {df_nan.shape[0]} date') 
     
     df_feature = pd.read_excel('./feature_modelli.ods', engine='odf', header=0)
     colonne_modello = sorted(df_feature[f"shortName_{dict_config_modelli[config.get('CONCATENAZIONI', 'modello')]}"].dropna().tolist())
@@ -487,7 +490,12 @@ for s in lista_stazioni:
     #     print(error)
     #     pass
 
-    df_s.to_csv(f"{cartella_output_concatenazioni}/df_{range_previsionale}_{s}_{dict_config_modelli[config.get('CONCATENAZIONI', 'modello')]}_{config.get('CONCATENAZIONI', 'regione')}.csv", index=True, header=True, mode='w', na_rep=np.nan)
+    nome_df_s = f"df_{range_previsionale}_{s}_{dict_config_modelli[config.get('CONCATENAZIONI', 'modello')]}_{config.get('CONCATENAZIONI', 'regione')}.csv"
+    df_s.to_csv(f'{cartella_df_s_tutti_i_punti}/{nome_df_s}', index=True, header=True, mode='w', na_rep=np.nan)
+
+    ### Ne approfitto per creare un dataset che contiene solo il punto A
+    df_s_A = pd.concat([df_s[[x for x in df_s.columns if '_A_' in x]], df_s[[x for x in df_s.columns if not '_' in x]]], axis=1)
+    df_s_A.to_csv(f'{cartella_df_s_A}/{nome_df_s}', index=True, header=True, mode='w', na_rep=np.nan)
 
 # os.system(f'rm -rf {cartella_tmp}')
 

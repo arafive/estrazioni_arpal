@@ -41,7 +41,7 @@ lista_date_start_forecast = pd.date_range(f"{config.get('COMMON', 'data_inizio_e
 def f_estrazione(d):
 # for d in lista_date_start_forecast:
     t_inizio_d = time.time()
-    f_log_ciclo_for([['Data ', d, lista_date_start_forecast]])
+    # f_log_ciclo_for([['Data ', d, lista_date_start_forecast]])
     
     sub_cartella_grib = f'{d.year}/{d.month:02d}/{d.day:02d}'
 
@@ -49,7 +49,7 @@ def f_estrazione(d):
     nome_file_grib = f"ecmf_0.1_{d.year}{d.month:02d}{d.day:02d}{config.get('COMMON', 'ora_start_forecast')}_181x161_2_20_34_50_undef_undef.grb"
 
     if not os.path.exists(f'{percorso_file_grib}/{nome_file_grib}'):
-        logger.warning('File {nome_file_grib} non presente nella cartella {percorso_file_grib}. Continuo')
+        logger.warning(f'File {nome_file_grib} non presente nella cartella {percorso_file_grib}. Continuo')
         return
         # continue
         
@@ -58,14 +58,36 @@ def f_estrazione(d):
     
     # global df_attrs
     df_attrs = f_dataframe_ds_variabili(lista_ds)
-    
+
     ### Ciclo sulle variabili
     for v in ast.literal_eval(config.get('ECITA', 'variabili_da_estratte')):
         t_inizio_v = time.time()
         
         if v not in df_attrs.index:
-            logger.warning('Variabile {v} non presente nel file {nome_file_grib}. Continuo')
+            logger.warning(f'Variabile {v} non presente nel file {nome_file_grib}. Continuo')
             continue
+        
+        if v == 'cape':
+            #  ___         _    _                     _     _    ___   _   ___ ___            _     _    ___ ___ _  _ 
+            # | _ \_ _ ___| |__| |___ _ __  __ _   __| |___| |  / __| /_\ | _ \ __|  ___   __| |___| |  / __|_ _| \| |
+            # |  _/ '_/ _ \ '_ \ / -_) '  \/ _` | / _` / -_) | | (__ / _ \|  _/ _|  / -_) / _` / -_) | | (__ | || .` |
+            # |_| |_| \___/_.__/_\___|_|_|_\__,_| \__,_\___|_|  \___/_/ \_\_| |___| \___| \__,_\___|_|  \___|___|_|\_|
+
+            """ Dal 2024-11-13 il cape ha avuto dei problemi:
+            2024-11-13 --> no cape, solo capes
+            2024-11-14 --> no cape, solo capes
+            2024-11-15 --> cape e capes ma a cape e cin mancano i "GRIB_dataType" e "GRIB_typeOfLevel", che devono essere entrambi "fc" e "surface"
+            2024-11-16 --> come 2024-11-15
+            . . .
+            2024-11-30 --> come 2024-11-15
+            """
+            if np.isnan(df_attrs.loc[v, 'GRIB_dataType']):
+                df_attrs.loc[v, 'GRIB_dataType'] = 'fc'
+            if np.isnan(df_attrs.loc[v, 'GRIB_typeOfLevel']):
+                df_attrs.loc[v, 'GRIB_typeOfLevel'] = 'surface'
+                
+            ### Sembra che adesso si chiami "level" e non "surcafe". Lo rinomino nel dataset.
+            lista_ds[df_attrs.loc[v]['id_ds']] = lista_ds[df_attrs.loc[v]['id_ds']].rename({'level': 'surface'})
         
         df_sub_attrs = df_attrs.loc[v, :]
         
@@ -75,7 +97,7 @@ def f_estrazione(d):
         ### Ciclo sulla posizione degli indici
         for i in range(df_sub_attrs.shape[0]):
             
-            # f_log_ciclo_for([['Data ', d, lista_date_start_forecast], [f'Variabile (indice {i}) ', v, ast.literal_eval(config.get('ECITA', 'variabili_da_estratte'))]])
+            f_log_ciclo_for([['Data ', d, lista_date_start_forecast], [f'Variabile (indice {i}) ', v, ast.literal_eval(config.get('ECITA', 'variabili_da_estratte'))]])
             
             nome_var = df_sub_attrs.index[0]
             grib_dataType = df_sub_attrs.iloc[i]['GRIB_dataType']
@@ -139,7 +161,7 @@ def f_estrazione(d):
                         ### (tempi, livelli, latitudini, longitudini)
 
                         df_tmp = pd.DataFrame()
-                        
+
                         for ind_l, l in enumerate(livelli):
                             estrazione_tempi = ds[nome_var].values[:, ind_l, lat_min, lon_min].squeeze()
                             df_tmp = pd.concat([df_tmp, pd.DataFrame(estrazione_tempi, index=[tempi], columns=[f'{lettera}_{l}'])], axis=1)
