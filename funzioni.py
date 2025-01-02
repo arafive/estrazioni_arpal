@@ -14,6 +14,11 @@ def f_logger(livello_minimo='INFO'):
     """Crea un logger per stampare log colorati sul terminale e normali su un file di log."""
     # https://betterstack.com/community/guides/logging/how-to-start-logging-with-python/
     
+    levelname_completo = True # se è True allora verrà "info" oppure "INFO", altrimenti "I"
+    numero_formato = 2 # 1, 2
+    ### 1. --> INFO     | 2025-01-02 11:10:05.706 | studio_logging.py:146  | 1169383 >>> Informazioni generali su cosa sta facendo il programma.
+    ### 2. --> 2025-01-02 11:07:14.359   info       studio_logging.py:146    1169027   Informazioni generali su cosa sta facendo il programma.
+    
     resetta_colore = '\033[0m'
     dict_colori = {
         'DEBUG': '\033[3;36m',    # Ciano, 3; vuol dire italic
@@ -38,18 +43,30 @@ def f_logger(livello_minimo='INFO'):
             # Se l'output è su un file, evita i colori
             if isinstance(levelname, str) and sys.stdout.isatty():
                 log_color = dict_colori.get(levelname, resetta_colore)
-                # record.levelname = f'{log_color}{levelname[0:1]}{resetta_colore}'
-                record.levelname = f'{log_color}{levelname:<8}{resetta_colore}'
+                
+                if levelname_completo:
+                    record.levelname = f'{log_color}{levelname:<8}{resetta_colore}'
+                else:
+                    record.levelname = f'{log_color}{levelname[0:1]}{resetta_colore}'
             else:
-                # record.levelname = levelname[0:1]
-                record.levelname = f'{levelname:<8}'
+                if levelname_completo:
+                    record.levelname = f'{levelname:<8}'
+                else:
+                    record.levelname = levelname[0:1]
+
+            if numero_formato == 2 and levelname_completo:
+                record.levelname = record.levelname.lower()
                 
             return super().format(record)
-    
+        
     handler = logging.StreamHandler(sys.stdout)
-    formato = '%(levelname)s | %(asctime)s.%(msecs)03d | %(filename)s:%(lineno)-4s | %(process)d >>> %(message)s'
-    datefmt = '%Y-%m-%d %H:%M:%S'
-    handler.setFormatter(ColoredFormatter(formato, datefmt=datefmt))
+
+    if numero_formato == 1:
+        formato = '%(levelname)s | %(asctime)s.%(msecs)03d | %(filename)s:%(lineno)-4s | %(process)d >>> %(message)s'
+    elif numero_formato == 2:
+        formato = '%(asctime)s.%(msecs)03d   %(levelname)s   %(filename)s:%(lineno)-4s   %(process)d   %(message)s'
+
+    handler.setFormatter(ColoredFormatter(formato, datefmt='%Y-%m-%d %H:%M:%S'))
     
     logging.basicConfig(handlers=[handler])
     logger = logging.getLogger()

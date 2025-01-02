@@ -23,10 +23,10 @@ from funzioni import f_logger
 logger = f_logger('DEBUG')
 
 # %%
-# cartella_madre_estrazioni = f'{cartella_HD}/Daniele2TB/test/rete_pioggia/Estrazioni_AIxtreme/Liguria/nuova_estrazione'
 cartella_madre_estrazioni = f'{cartella_HD}/Daniele2TB/test/rete_pioggia/Estrazioni_AIxtreme/Liguria'
 
-modelli = ['BOLAM', 'MOLOCHsfc', 'MOLOCH', 'ECMWF']
+# modelli = ['BOLAM', 'MOLOCHsfc', 'MOLOCH', 'ECMWF']
+modelli = ['ECMWF']
 
 for m in modelli:
     
@@ -44,27 +44,30 @@ for m in modelli:
                 
                 for file_targz in lista_file_targz:
                     nome_cartella_output = file_targz.split('.')[0].split('-')[-1]
-                    if os.path.exists(f'{cartella_forecast}/{nome_cartella_output}'):
-                        logger.info(f'{cartella_forecast}/{nome_cartella_output} esiste già. Continuo.')
-                        continue
-                        
+                    
+                    ### Tolgo questa condizione perché al più la sovrascrivo
+                    # if os.path.exists(f'{cartella_forecast}/{nome_cartella_output}'):
+                    #     logger.info(f'{cartella_forecast}/{nome_cartella_output} esiste già. Continuo.')
+                    #     continue
+                    
                     os.chdir(cartella_forecast)
                     comando = f'tar -zxf {cartella_forecast}/{file_targz}'
                     logger.info(comando)
                     os.system(comando)
                     
+                    ### !!! Questa parte adesso può essere rimossa
                     ### Verrà creata una cartella 'home', non so perché ma il tar si è preso tutto il percorso originale
-                    for percorso_cartella, dirs_dentro, files_dentro in os.walk(f'{cartella_forecast}/home'):
-                        if nome_cartella_output in dirs_dentro:
-                            comando = f'mv {percorso_cartella}/{nome_cartella_output} .'
-                            logger.info(comando)
-                            os.system(comando)
+                    # for percorso_cartella, dirs_dentro, files_dentro in os.walk(f'{cartella_forecast}/home'):
+                    #     if nome_cartella_output in dirs_dentro:
+                    #         comando = f'mv {percorso_cartella}/{nome_cartella_output} .'
+                    #         logger.info(comando)
+                    #         os.system(comando)
                             
-                            comando = f'rm -rf {cartella_forecast}/home'
-                            logger.debug(comando)
-                            os.system(comando)
+                    #         comando = f'rm -rf {cartella_forecast}/home'
+                    #         logger.debug(comando)
+                    #         os.system(comando)
                             
-                            break
+                    #         break
     else:
         logger.warning(f'Cartella {cartella_madre_estrazioni}/{m} NON trovata. Continuo.')
 

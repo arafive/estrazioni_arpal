@@ -51,6 +51,7 @@ def f_estrazione(d):
     nome_file_grib = f"bo08_{d.year}{d.month:02d}{d.day:02d}{config.get('COMMON', 'ora_start_forecast')}.grib2"
 
     if not os.path.exists(f'{percorso_file_grib}/{nome_file_grib}'):
+        ### Manca il run delle 00 del 17 gennaio 2020
         logger.warning(f'File {nome_file_grib} non presente nella cartella {percorso_file_grib}. Continuo')
         return
         # continue

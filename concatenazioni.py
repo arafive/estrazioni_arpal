@@ -1,7 +1,7 @@
 
 import os
 import time
-import string
+# import string
 import configparser
 import multiprocessing
 
@@ -19,13 +19,13 @@ from metpy.calc import virtual_temperature
 from joblib import delayed
 from joblib import Parallel
 
-lista_possibili_cartelle_lavoro = [
-    '/media/daniele/Daniele2TB/repo/estrazioni_arpal',
-    '/run/media/daniele.carnevale/Daniele2TB/repo/estrazioni_arpal',
-    ]
+# lista_possibili_cartelle_lavoro = [
+#     '/media/daniele/Daniele2TB/repo/estrazioni_arpal',
+#     '/run/media/daniele.carnevale/Daniele2TB/repo/estrazioni_arpal',
+#     ]
 
-os.chdir([x for x in lista_possibili_cartelle_lavoro if os.path.exists(x)][0])
-del (lista_possibili_cartelle_lavoro)
+# os.chdir([x for x in lista_possibili_cartelle_lavoro if os.path.exists(x)][0])
+# del (lista_possibili_cartelle_lavoro)
 
 from funzioni import f_log_ciclo_for
 from funzioni import f_crea_cartella
@@ -51,7 +51,7 @@ cartella_madre_estrazione = f"{config.get('COMMON', 'cartella_madre_estrazione')
 ora_start_forecast = f"{config.get('COMMON', 'ora_start_forecast')}"
 punti_piu_vicini_da_estrarre = int(f"{config.get('COMMON', 'punti_piu_vicini_da_estrarre')}")
 
-cartella_dati_osservati = f"{config.get('CONCATENAZIONI', 'cartella_dati_osservati')}"
+# cartella_dati_osservati = f"{config.get('CONCATENAZIONI', 'cartella_dati_osservati')}"
 cartella_madre_output_concatenazioni = f"{config.get('CONCATENAZIONI', 'cartella_madre_output_concatenazioni')}"
 range_previsionale = f"{config.get('CONCATENAZIONI', 'range_previsionale')}"
 
@@ -62,9 +62,8 @@ cartella_tmp = f_crea_cartella(f'{cartella_output_concatenazioni}/tmp')
 
 lista_variabili = sorted([x for x in os.listdir(f'{cartella_madre_estrazione}/{ora_start_forecast}') if not x.endswith('.txt')])
 
-# def f_concatenazione(v):
-for v in lista_variabili:
-# for v in ['q']:
+def f_concatenazione(v):
+# for v in lista_variabili:
     
     # if v == 'w' and config.get('CONCATENAZIONI', 'modello') == 'ECMWF':
     #     logger.info('Modello ECMWF, salto la variabile w perchè non ha i livelli in quota, oltre 500 hPa')
@@ -76,8 +75,8 @@ for v in lista_variabili:
     
     if os.path.exists(nome_df_finale):
         logger.info(f'{nome_df_finale} esiste già. Continuo.')
-        continue
-        # return
+        # continue
+        return
         
     df_v = pd.DataFrame()
 
@@ -186,27 +185,27 @@ for v in lista_variabili:
 # # # # # # # #   # # # # # # # #   # # # # # # # #
 
 
-# if int(config.get('CONCATENAZIONI', 'job')) == 0:
-#     ### Ciclo sulle variabili
-#     for v in lista_variabili:
-#         f_concatenazione(v)
+if int(config.get('CONCATENAZIONI', 'job')) == 0:
+    ### Ciclo sulle variabili
+    for v in lista_variabili:
+        f_concatenazione(v)
 
-# else:
-#     if config.get('CONCATENAZIONI', 'tipo_di_parallellizzazione') == 'joblib':
-#         Parallel(n_jobs=int(config.get('CONCATENAZIONI', 'job')), verbose=1000)(delayed(f_concatenazione)(v) for v in lista_variabili)
+else:
+    if config.get('CONCATENAZIONI', 'tipo_di_parallellizzazione') == 'joblib':
+        Parallel(n_jobs=int(config.get('CONCATENAZIONI', 'job')), verbose=1000)(delayed(f_concatenazione)(v) for v in lista_variabili)
     
-#     elif config.get('CONCATENAZIONI', 'tipo_di_parallellizzazione') == 'multiprocessing':
-#         pool = multiprocessing.Pool(processes=int(config.get('CONCATENAZIONI', 'job')))
-#         pool.map(f_concatenazione, lista_variabili)
-#         pool.close()
-#         pool.join() # Aspetta che tutti finiscano
+    elif config.get('CONCATENAZIONI', 'tipo_di_parallellizzazione') == 'multiprocessing':
+        pool = multiprocessing.Pool(processes=int(config.get('CONCATENAZIONI', 'job')))
+        pool.map(f_concatenazione, lista_variabili)
+        pool.close()
+        pool.join() # Aspetta che tutti finiscano
 
 # %%
 # exit(0)
 
 dict_nomi_variabili = {
-    'capecon' : 'cape',
-    'clct' : 'tcc',
+    'capecon': 'cape',
+    'clct': 'tcc',
     'pmsl': 'msl',
     'qv': 'q',
     'r2': 'rh2m',
@@ -229,10 +228,12 @@ for s in lista_stazioni:
         df_v = pd.read_csv(f"{cartella_tmp}/df_{v}_{range_previsionale}_{dict_config_modelli[config.get('CONCATENAZIONI', 'modello')]}_{config.get('CONCATENAZIONI', 'regione')}.csv", index_col=0, parse_dates=True)
 
         try:
-            df_v.index = pd.to_datetime(df_v.index)
+            df_v.index = pd.to_datetime(df_v.index, format='ISO8601')
         except ValueError as e:
-            logger.warning(e)
+            logger.error(e)
+            raise
             
+            ### Questi if non funzionano bene, ho messo format='ISO8601' e sembra gestire bene le date
             if config.get('CONCATENAZIONI', 'modello') == 'MOLOCH' and range_previsionale == '0-24':
                 df_v = df_v.drop('2024-01-01', axis=0)
             elif config.get('CONCATENAZIONI', 'modello') == 'ECMWF' and range_previsionale == '24-48':

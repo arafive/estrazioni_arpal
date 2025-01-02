@@ -81,13 +81,15 @@ def f_estrazione(d):
             . . .
             2024-11-30 --> come 2024-11-15
             """
-            if np.isnan(df_attrs.loc[v, 'GRIB_dataType']):
-                df_attrs.loc[v, 'GRIB_dataType'] = 'fc'
-            if np.isnan(df_attrs.loc[v, 'GRIB_typeOfLevel']):
-                df_attrs.loc[v, 'GRIB_typeOfLevel'] = 'surface'
+            
+            if not type(df_attrs.loc[v, 'GRIB_dataType']) is str:
+                if np.isnan(df_attrs.loc[v, 'GRIB_dataType']):
+                    df_attrs.loc[v, 'GRIB_dataType'] = 'fc'
+                if np.isnan(df_attrs.loc[v, 'GRIB_typeOfLevel']):
+                    df_attrs.loc[v, 'GRIB_typeOfLevel'] = 'surface'
                 
-            ### Sembra che adesso si chiami "level" e non "surcafe". Lo rinomino nel dataset.
-            lista_ds[df_attrs.loc[v]['id_ds']] = lista_ds[df_attrs.loc[v]['id_ds']].rename({'level': 'surface'})
+                ### Sembra che adesso si chiami "level" e non "surcafe". Lo rinomino nel dataset.
+                lista_ds[df_attrs.loc[v]['id_ds']] = lista_ds[df_attrs.loc[v]['id_ds']].rename({'level': 'surface'})
         
         df_sub_attrs = df_attrs.loc[v, :]
         
