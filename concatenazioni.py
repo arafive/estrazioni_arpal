@@ -19,13 +19,13 @@ from metpy.calc import virtual_temperature
 from joblib import delayed
 from joblib import Parallel
 
-# lista_possibili_cartelle_lavoro = [
-#     '/media/daniele/Daniele2TB/repo/estrazioni_arpal',
-#     '/run/media/daniele.carnevale/Daniele2TB/repo/estrazioni_arpal',
-#     ]
+lista_possibili_cartelle_lavoro = [
+    '/media/daniele/Daniele2TB/repo/estrazioni_arpal',
+    '/home/cfmi.arpal.org/daniele.carnevale/Scrivania/estrazioni_arpal'
+]
 
-# os.chdir([x for x in lista_possibili_cartelle_lavoro if os.path.exists(x)][0])
-# del (lista_possibili_cartelle_lavoro)
+os.chdir([x for x in lista_possibili_cartelle_lavoro if os.path.exists(x)][0])
+del (lista_possibili_cartelle_lavoro)
 
 from funzioni import f_log_ciclo_for
 from funzioni import f_crea_cartella
@@ -58,6 +58,10 @@ range_previsionale = f"{config.get('CONCATENAZIONI', 'range_previsionale')}"
 cartella_output_concatenazioni = f_crea_cartella(f"{cartella_madre_output_concatenazioni}/{dict_config_modelli[config.get('CONCATENAZIONI', 'modello')]}/{ora_start_forecast}/{range_previsionale}")
 cartella_tmp = f_crea_cartella(f'{cartella_output_concatenazioni}/tmp')
 
+print()
+logger.info(f"{config.get('CONCATENAZIONI', 'modello')}, {range_previsionale}")
+print()
+
 # %%
 
 lista_variabili = sorted([x for x in os.listdir(f'{cartella_madre_estrazione}/{ora_start_forecast}') if not x.endswith('.txt')])
@@ -79,7 +83,7 @@ def f_concatenazione(v):
         return
         
     df_v = pd.DataFrame()
-
+    
     # lista_cartelle_an_fc = sorted(os.listdir(f'{cartella_madre_estrazione}/{ora_start_forecast}/{v}'))
     # for f in lista_cartelle_an_fc:
     f = 'fc'  # Non prendo l'analisi
@@ -123,13 +127,13 @@ def f_concatenazione(v):
                     logger.debug('df contiene un punto (.) .')
                     df.columns = [x.split('.')[0] for x in df.columns]
                     df.columns = [f"{x.split('_')[0]}_{x.split('_')[1]}" for x in df.columns]
-                
+
                 if len(df.columns[0].split('_')) == 2 and dict_config_modelli[config.get('CONCATENAZIONI', 'modello')] == 'ECMWF':
                     ### Ecita non ha sempre avuto un numero costante di livelli in pressione.
                     ### Devo tenere solo quelli sempre presenti.
                     ### I venti tipo u10 non vengono tolti.
                     logger.debug('Tolgo dei livelli dal df di ECITA.')
-                    livelli_hPa_da_togliere = [10] + [int(x) for x in np.arange(25, 325, 25)]
+                    livelli_hPa_da_togliere = [10] + [int(x) for x in np.arange(25, 300, 25)] + [300] # non sono pazzo, metto 300 hPa perché per tutto il 2020 ecita non aveva questo livello
                     for livello_da_togliere in livelli_hPa_da_togliere:
                         df = df.drop(columns=[x for x in df.columns if str(livello_da_togliere) in x.split('_')])
                     
@@ -201,7 +205,6 @@ else:
         pool.join() # Aspetta che tutti finiscano
 
 # %%
-# exit(0)
 
 dict_nomi_variabili = {
     'capecon': 'cape',
@@ -213,7 +216,7 @@ dict_nomi_variabili = {
     'cp': 'cp3',
     }
 
-print('\nCreazione dei dataset delle singole stazioni\n')
+logger.inf('Creazione dei dataset delle singole stazioni.')
 
 lista_stazioni = pd.read_csv(config.get('COMMON', 'percorso_file_coordinate'), index_col=0).index.tolist()
 cartella_df_s_tutti_i_punti = f_crea_cartella(f'{cartella_output_concatenazioni}/dataset_tutti_i_punti')
@@ -223,7 +226,7 @@ for s in lista_stazioni:
     f_log_ciclo_for([['Stazione ', s, lista_stazioni]])
 
     df_s = pd.DataFrame()
-    
+
     for v in lista_variabili:
         df_v = pd.read_csv(f"{cartella_tmp}/df_{v}_{range_previsionale}_{dict_config_modelli[config.get('CONCATENAZIONI', 'modello')]}_{config.get('CONCATENAZIONI', 'regione')}.csv", index_col=0, parse_dates=True)
 

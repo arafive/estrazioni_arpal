@@ -38,6 +38,7 @@ def f_logger(livello_minimo='INFO'):
             super().__init__(fmt, datefmt)
 
         def format(self, record):
+            record.filename = sys.argv[0].split('/')[-1] # In questo modo 'filename' è sempre il nome del __main__
             levelname = record.levelname
             
             # Se l'output è su un file, evita i colori

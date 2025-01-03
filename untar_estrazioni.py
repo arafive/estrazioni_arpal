@@ -3,12 +3,12 @@ import os
 
 lista_possibili_cartelle_lavoro = [
     '/media/daniele/Daniele2TB/repo/estrazioni_arpal',
-    '/run/media/daniele.carnevale/Daniele2TB/repo/estrazioni_arpal',
+    '/run/media/daniele.carnevale/Daniele2TB/repo/estrazioni_arpal'
 ]
 
 lista_possibili_cartelle_HD = [
     '/media/daniele',
-    '/run/media/daniele.carnevale',
+    '/run/media/daniele.carnevale'
 ]
 
 cartella_lavoro = [x for x in lista_possibili_cartelle_lavoro if os.path.exists(x)][0]
@@ -55,19 +55,6 @@ for m in modelli:
                     logger.info(comando)
                     os.system(comando)
                     
-                    ### !!! Questa parte adesso può essere rimossa
-                    ### Verrà creata una cartella 'home', non so perché ma il tar si è preso tutto il percorso originale
-                    # for percorso_cartella, dirs_dentro, files_dentro in os.walk(f'{cartella_forecast}/home'):
-                    #     if nome_cartella_output in dirs_dentro:
-                    #         comando = f'mv {percorso_cartella}/{nome_cartella_output} .'
-                    #         logger.info(comando)
-                    #         os.system(comando)
-                            
-                    #         comando = f'rm -rf {cartella_forecast}/home'
-                    #         logger.debug(comando)
-                    #         os.system(comando)
-                            
-                    #         break
     else:
         logger.warning(f'Cartella {cartella_madre_estrazioni}/{m} NON trovata. Continuo.')
 
