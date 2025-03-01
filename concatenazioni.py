@@ -109,7 +109,7 @@ for v in lista_variabili:
             df_s = pd.DataFrame()
 
             lista_file_tempi = sorted(os.listdir(f'{cartella_madre_estrazione}/{ora_start_forecast}/{v}/{f}/{l}/{s}'))
-            lista_file_tempi = ['2024-10-25.csv']
+            # lista_file_tempi = ['2024-10-25.csv']
             lista_datetime = pd.to_datetime([x.split('.')[0] for x in lista_file_tempi])
             
             for t, d in zip(lista_file_tempi, lista_datetime):
