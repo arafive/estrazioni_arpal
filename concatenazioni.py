@@ -66,9 +66,11 @@ print()
 
 lista_variabili = sorted([x for x in os.listdir(f'{cartella_madre_estrazione}/{ora_start_forecast}') if not x.endswith('.txt')])
 
-def f_concatenazione(v):
-# for v in lista_variabili:
+# def f_concatenazione(v):
+for v in lista_variabili:
+# for v in ['tp']:
     
+    ### Commento perché questo livello di file temporanei non mi interessa; quando creo il dataset per la rete non potrò mettere il livello 300 hPa per Ecita.
     # if v == 'w' and config.get('CONCATENAZIONI', 'modello') == 'ECMWF':
     #     logger.info('Modello ECMWF, salto la variabile w perchè non ha i livelli in quota, oltre 500 hPa')
     #     continue
@@ -79,8 +81,8 @@ def f_concatenazione(v):
     
     if os.path.exists(nome_df_finale):
         logger.info(f'{nome_df_finale} esiste già. Continuo.')
-        # continue
-        return
+        continue
+        # return
         
     df_v = pd.DataFrame()
     
@@ -100,52 +102,51 @@ def f_concatenazione(v):
         lista_stazioni = sorted(os.listdir(f'{cartella_madre_estrazione}/{ora_start_forecast}/{v}/{f}/{l}'))
 
         for s in lista_stazioni:
-        # for s in lista_stazioni[0:2]:
+        # for s in ['MTPOR']:
             # t_inizio_s = time.time()
             f_log_ciclo_for([[f'Variabile ({l}) ', v, lista_variabili], ['Stazione ', s, lista_stazioni]])
 
             df_s = pd.DataFrame()
 
             lista_file_tempi = sorted(os.listdir(f'{cartella_madre_estrazione}/{ora_start_forecast}/{v}/{f}/{l}/{s}'))
+            lista_file_tempi = ['2024-10-25.csv']
             lista_datetime = pd.to_datetime([x.split('.')[0] for x in lista_file_tempi])
             
-            # lista_datetime = lista_datetime[0:10]
-            
             for t, d in zip(lista_file_tempi, lista_datetime):
-                # print(v, f, l, s, t)
                 cartella_df = f'{cartella_madre_estrazione}/{ora_start_forecast}/{v}/{f}/{l}/{s}'
-
+                
                 try:
                     df = pd.read_csv(f'{cartella_df}/{t}', index_col=0, parse_dates=True)
                 except pd.errors.EmptyDataError as e:
-                    ### ECMWF/00/cape/fc/surface/TESTI/2021-02-03.csv erano vuoti, non so perchè
+                    ### ECMWF/00/cape/fc/surface/TESTI/2021-02-03.csv erano vuoti, non so perchè --> non c'è più questo problema ma lascio lo stesso il try
                     logger.warning(e)
                     continue
-
-                if '.' in df.columns[0]:
+                
+                if '.' in df.columns[0]: # --> credo non sia più necessario perché ho riestratto varie volte
                     ### Colpa mia, solo nell'ecita
                     logger.debug('df contiene un punto (.) .')
                     df.columns = [x.split('.')[0] for x in df.columns]
                     df.columns = [f"{x.split('_')[0]}_{x.split('_')[1]}" for x in df.columns]
 
                 if len(df.columns[0].split('_')) == 2 and dict_config_modelli[config.get('CONCATENAZIONI', 'modello')] == 'ECMWF':
-                    ### Ecita non ha sempre avuto un numero costante di livelli in pressione.
-                    ### Devo tenere solo quelli sempre presenti.
+                    ### Ecita non ha sempre avuto un numero costante di livelli in pressione (200 e 300 in particolare). Devo tenere solo quelli sempre presenti.
                     ### I venti tipo u10 non vengono tolti.
-                    logger.debug('Tolgo dei livelli dal df di ECITA.')
-                    livelli_hPa_da_togliere = [10] + [int(x) for x in np.arange(25, 300, 25)] + [300] # non sono pazzo, metto 300 hPa perché per tutto il 2020 ecita non aveva questo livello
+                    logger.debug('Tolgo dei livelli dal df di Ecita.')
+                    livelli_hPa_da_togliere = [10, 25, 50, 75, 100, 125, 150, 175, 200, 225, 275, 300]
+                    # metto 300 hPa perché per tutto il 2020 Ecita non aveva questo livello
+                    # lascio 250 hPa perché era presente sempre
                     for livello_da_togliere in livelli_hPa_da_togliere:
                         df = df.drop(columns=[x for x in df.columns if str(livello_da_togliere) in x.split('_')])
                     
                 if dict_config_modelli[config.get('CONCATENAZIONI', 'modello')] == 'ECMWF' and v in ['tp', 'cp']:
                     ### Ecita: non ha la tp3 ma una precipitazione cumulata dallo start fino alla fine
-                    logger.debug(f'Rendo la {v} di ECITA una cumulata nelle ore.')
-                    df_shift = df.shift(periods=1, fill_value=0) # periods=1 per la tp3
+                    logger.debug(f'Rendo la {v} di Ecita una cumulata nelle ore.')
+                    df_shift = df.shift(periods=3, fill_value=0) # periods=3 per la tp3 con ECMWF perché ha un passo nativo orario
                     df = df - df_shift
 
                 if df.index[0].hour == 0:
-                    ### Ecita: dal 2023-01-14 l'analisi e il forecast non sono più separati. Devo togliere la prima riga
-                    logger.debug('Tolgo la prima riga dal df di ECITA.')
+                    ### Ecita: dal 2023-01-14 l'analisi e il forecast non sono più separati. Devo togliere la prima riga.
+                    logger.debug('Tolgo la prima riga dal df di Ecita.')
                     df = df.drop(df.index[0], axis=0)
 
                 freq = '1h' if dict_config_modelli[config.get('CONCATENAZIONI', 'modello')] == 'MOLOCHsfc' else '3h'
@@ -164,7 +165,7 @@ def f_concatenazione(v):
             try:
                 df_v = pd.concat([df_v, df_s], axis=1)
             except pd.errors.InvalidIndexError as e:
-                ### Problemi con ECMWF/00/cape/fc/surface/TESTI/2023-12-31.csv
+                ### Problemi con ECMWF/00/cape/fc/surface/TESTI/2023-12-31.csv --> non c'è più questo problema ma lascio lo stesso il try
                 logger.warning(e)
                 continue
             
@@ -174,10 +175,15 @@ def f_concatenazione(v):
 
     f_check_duplicati(df_v)
     df_v = df_v[~df_v.index.duplicated(keep='last')]
-    
+
     df_v = df_v.reindex(lista_completa_datetime, fill_value=np.nan)
     df_v = df_v.sort_index()
-    df_v = df_v.dropna()
+    
+    df_v_righe_nan = df_v[df_v.isna().any(axis=1)]
+    if df_v_righe_nan.shape[0] > 1:
+        logger.warning(f'df_v della variabile {v} contiene {df_v_righe_nan.shape[0]} con dei NaN.')
+        
+    df_v = df_v.dropna() # --> questa riga cancella tutto quello che c'è prima del 2021-01-15 03:00:00 per ecita SE non elimino alcuni livelli in quota che non erano presenti.
 
     df_v.to_csv(nome_df_finale, index=True, header=True, mode='w', na_rep=np.nan)
 
@@ -189,20 +195,24 @@ def f_concatenazione(v):
 # # # # # # # #   # # # # # # # #   # # # # # # # #
 
 
-if int(config.get('CONCATENAZIONI', 'job')) == 0:
-    ### Ciclo sulle variabili
-    for v in lista_variabili:
-        f_concatenazione(v)
+# if int(config.get('CONCATENAZIONI', 'job')) == 0:
+#     ### Ciclo sulle variabili
+#     for v in lista_variabili:
+#         f_concatenazione(v)
 
-else:
-    if config.get('CONCATENAZIONI', 'tipo_di_parallellizzazione') == 'joblib':
-        Parallel(n_jobs=int(config.get('CONCATENAZIONI', 'job')), verbose=1000)(delayed(f_concatenazione)(v) for v in lista_variabili)
+# else:
+#     if config.get('CONCATENAZIONI', 'tipo_di_parallellizzazione') == 'joblib':
+#         Parallel(n_jobs=int(config.get('CONCATENAZIONI', 'job')), verbose=1000)(delayed(f_concatenazione)(v) for v in lista_variabili)
     
-    elif config.get('CONCATENAZIONI', 'tipo_di_parallellizzazione') == 'multiprocessing':
-        pool = multiprocessing.Pool(processes=int(config.get('CONCATENAZIONI', 'job')))
-        pool.map(f_concatenazione, lista_variabili)
-        pool.close()
-        pool.join() # Aspetta che tutti finiscano
+#     elif config.get('CONCATENAZIONI', 'tipo_di_parallellizzazione') == 'multiprocessing':
+#         pool = multiprocessing.Pool(processes=int(config.get('CONCATENAZIONI', 'job')))
+#         pool.map(f_concatenazione, lista_variabili)
+#         pool.close()
+#         pool.join() # Aspetta che tutti finiscano
+
+print()
+logger.info('Creazione dei file temporanei conclusa.')
+print()
 
 # %%
 
@@ -216,13 +226,16 @@ dict_nomi_variabili = {
     'cp': 'cp3',
     }
 
-logger.inf('Creazione dei dataset delle singole stazioni.')
+print()
+logger.info('Inizio creazione dei dataset delle singole stazioni.')
+print()
 
 lista_stazioni = pd.read_csv(config.get('COMMON', 'percorso_file_coordinate'), index_col=0).index.tolist()
 cartella_df_s_tutti_i_punti = f_crea_cartella(f'{cartella_output_concatenazioni}/dataset_tutti_i_punti')
 cartella_df_s_A = f_crea_cartella(f'{cartella_output_concatenazioni}/dataset_A')
 
 for s in lista_stazioni:
+# for s in ['MTPOR']:
     f_log_ciclo_for([['Stazione ', s, lista_stazioni]])
 
     df_s = pd.DataFrame()
@@ -246,19 +259,19 @@ for s in lista_stazioni:
             
             df_v.index = pd.to_datetime(df_v.index)
             
-        df_v_nan = df_v.dropna()
-        logger.debug(f'Mancano {df_v.shape[0] - df_v_nan.shape[0]} date al dataset di {v}')
-        del (df_v_nan)
+        df_v_NO_nan = df_v.dropna()
+        logger.debug(f'Mancano {df_v.shape[0] - df_v_NO_nan.shape[0]} date al dataset di {v}')
+        del (df_v_NO_nan)
         
-        ### con gh, quando concateno, i dati mi diventano nan
-        # if v == 'gh': stop
+        ### con gh (e tutte le altre var. in quota), quando concateno i dati mi diventano nan, ma non succede con w
+        # if v == 'gh':
 
         # missing_in_df_s = df_v.index.difference(df_s.index)
         # missing_in_df_v = df_s.index.difference(df_v.index)
-        
+
         df_s = pd.concat([df_s, df_v[[x for x in df_v if s in x]]], axis=1)
         assert not df_s.dropna().shape[0] == 0
-        
+
     del (v)
 
     ### Rinomino i nomi delle colonne in modo che siano tutte con lo stesso nome tra i diversi modelli
@@ -285,7 +298,7 @@ for s in lista_stazioni:
     #####
     ##### Cumulate precipitative
     #####
-    
+
     lista_cumulate = [6, 12, 24] if not dict_config_modelli[config.get('CONCATENAZIONI', 'modello')] == 'MOLOCHsfc' else [3, 6, 12, 24]
 
     df_s.index = pd.to_datetime(df_s.index)
@@ -434,8 +447,8 @@ for s in lista_stazioni:
     if not dict_config_modelli[config.get('CONCATENAZIONI', 'modello')] == 'MOLOCHsfc':
         ora  = df_s.index.hour
         mese = df_s.index.month
-        df_cosh = pd.DataFrame(np.cos(2 * np.pi * ora / 23.0), index=df_s.index, columns=['cosh'])
-        df_sinh = pd.DataFrame(np.sin(2 * np.pi * ora / 23.0), index=df_s.index, columns=['sinh'])
+        df_cosh = pd.DataFrame(np.cos(2 * np.pi * ora / 24.0), index=df_s.index, columns=['cosh'])
+        df_sinh = pd.DataFrame(np.sin(2 * np.pi * ora / 24.0), index=df_s.index, columns=['sinh'])
         df_cosm = pd.DataFrame(np.cos(2 * np.pi * mese / 12.0), index=df_s.index, columns=['cosm'])
         df_sinm = pd.DataFrame(np.sin(2 * np.pi * mese / 12.0), index=df_s.index, columns=['sinm'])
     
@@ -443,7 +456,7 @@ for s in lista_stazioni:
 
     #####
     ##### Dati osservati
-    ##### Ho riflettuto ed è meglio avere gli osservati a parte
+    ##### --> Ho riflettuto ed è meglio avere gli osservati a parte
 
     #####
     #####

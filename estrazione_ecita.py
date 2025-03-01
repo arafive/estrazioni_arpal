@@ -88,7 +88,7 @@ def f_estrazione(d):
                 if np.isnan(df_attrs.loc[v, 'GRIB_typeOfLevel']):
                     df_attrs.loc[v, 'GRIB_typeOfLevel'] = 'surface'
                 
-                ### Sembra che adesso si chiami "level" e non "surcafe". Lo rinomino nel dataset.
+                ### Sembra che adesso si chiami "level" e non "surface". Lo rinomino nel dataset.
                 lista_ds[df_attrs.loc[v]['id_ds']] = lista_ds[df_attrs.loc[v]['id_ds']].rename({'level': 'surface'})
         
         df_sub_attrs = df_attrs.loc[v, :]
@@ -151,6 +151,7 @@ def f_estrazione(d):
 
                     elif grib_dataType == 'fc' and grib_typeOfLevel == 'potentialVorticity' and len(ds[nome_var].values.shape) == 2:
                         ### (latitudini, longitudini)
+                        ### mmm, forse non ci entro mai
                         estrazione = ds[nome_var].values[lat_min, lon_min]
                         df_estrazione = pd.concat([df_estrazione, pd.DataFrame(estrazione, index=[tempi], columns=[lettera])], axis=1)
 

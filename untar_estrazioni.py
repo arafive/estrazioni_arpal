@@ -26,7 +26,7 @@ logger = f_logger('DEBUG')
 cartella_madre_estrazioni = f'{cartella_HD}/Daniele2TB/test/rete_pioggia/Estrazioni_AIxtreme/Liguria'
 
 # modelli = ['BOLAM', 'MOLOCHsfc', 'MOLOCH', 'ECMWF']
-modelli = ['ECMWF']
+modelli = ['MOLOCH']
 
 for m in modelli:
     

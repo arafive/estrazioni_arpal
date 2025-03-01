@@ -59,7 +59,7 @@ def f_logger(livello_minimo='INFO'):
                 record.levelname = record.levelname.lower()
                 
             return super().format(record)
-        
+
     handler = logging.StreamHandler(sys.stdout)
 
     if numero_formato == 1:
